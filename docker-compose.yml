@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: vestra-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  vestra-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vestra-api
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      MONGODB_URI: mongodb://mongodb:27017
+      DATABASE_NAME: vestra
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+volumes:
+  mongodb_data:
