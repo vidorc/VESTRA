@@ -35,14 +35,38 @@ function Step({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
+/** Did the CIO change the analyst's proposal (action or size)? */
+function cioIntervention(trace: ReasoningTrace): { label: string; tone: "down" | "warning" } | null {
+  const cio = trace.cio;
+  const analyst = trace.analyst_decision;
+  if (!cio || !analyst) return null;
+  if (cio.vetoed) return { label: "CIO vetoed", tone: "down" };
+  if (cio.overrode) return { label: "CIO overrode council", tone: "warning" };
+  const final = cio.final_decision;
+  if (final.action !== analyst.action) return { label: "CIO changed action", tone: "down" };
+  if (final.quantity < analyst.quantity) return { label: "CIO downsized", tone: "warning" };
+  return null;
+}
+
 function TraceCard({ trace }: { trace: ReasoningTrace }) {
   const d = trace.decision;
   const conf = trace.confidence;
   const ts = trace.ts ? new Date(trace.ts).toLocaleString() : null;
+  const intervention = cioIntervention(trace);
+  const analyst = trace.analyst_decision;
 
   return (
     <Card>
-      {/* Headline: the decision this trace produced */}
+      {/* Governance banner: when the CIO altered the analyst's call, lead with it. */}
+      {intervention && analyst && (
+        <div className="-mx-lg -mt-lg mb-md flex items-center gap-xs rounded-t-lg border-b border-hairline bg-canvas-soft px-lg py-xs">
+          <Badge tone={intervention.tone}>{intervention.label}</Badge>
+          <span className="font-mono text-caption text-mute">
+            analyst {analyst.action} {analyst.quantity || ""} → final {d?.action} {d?.quantity || ""}
+          </span>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-md">
         <div className="flex items-center gap-xs">
           {d ? (

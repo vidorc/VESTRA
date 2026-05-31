@@ -4,7 +4,7 @@ Living status of the V2 build. Updated at each checkpoint. See
 `docs/VESTRA_V2_MASTER_PROMPT.md` for the full vision and `docs/ARCHITECTURE.md`
 for the system as built.
 
-_Last updated: Phase 1–2 frontend + Agent Reasoning complete._
+_Last updated: Phases 0–5 complete (full master-prompt roadmap)._
 
 ## ✅ Completed
 
@@ -67,38 +67,59 @@ _Last updated: Phase 1–2 frontend + Agent Reasoning complete._
   `/reasoning` screen renders each as the 7-stage pipeline in graph order.
 - 144 tests, ruff clean. Frontend typecheck + production build pass (12 routes).
 
+### Phase 4 — Personal CFO layer
+- `liquidity_pressure` (deterministic, from goals + digital twin) now wired into
+  the **risk node**: it estimates portfolio value (cash + holdings at reference
+  price), computes pressure, and tightens `safe_trade_limit` (×0.5 medium, ×0.25
+  high) toward capital preservation. DB loads degrade gracefully to "low".
+- Surfaced in the **strategy prompt** (preserve-capital rule) and the reasoning
+  screen (liquidity badge on the Risk step).
+
+### Phase 5 — Institutional Intelligence
+- **Memory** (`services/memory.py` + `agent_memories`): recall past decisions /
+  outcomes per ticker.
+- **Council** (`nodes/council.py`): four deterministic strategy seats (momentum,
+  contrarian, risk_averse, macro) → consensus action + dissent score.
+- **CIO** (`nodes/cio.py`): the final authority. Passes through, downsizes
+  (clamp to safe limit; cut after a losing streak via memory), vetoes (low
+  confidence) or overrides (against council) — but only for BUYs. Risk-reducing
+  SELLs are never blocked; governance gates capital deployment, not de-risking.
+- **Learning** (`nodes/learning.py`): writes execution outcomes back to memory
+  from the execute node, closing the loop the CIO reads next time.
+- Graph rewired `confidence → council → cio → simulation`; trace + reasoning
+  screen show council, CIO verdict, and an analyst→final governance banner.
+
+### Phase 3 — Autonomous Execution (paper/demo)
+- `nodes/browser_executor.py`: **paper** mode (deterministic simulation, default,
+  no browser — synthetic reproducible confirmation id) and **demo** mode (lazy
+  headless Playwright screenshot as audit evidence, degrades to paper if the
+  library is absent). **Live** real-money execution is deliberately refused.
+- Execution node attaches evidence (mode from `EXECUTION_MODE`, default paper);
+  Audit screen surfaces it. Real broker integration remains out of scope.
+- 169 tests, ruff clean. Frontend typecheck + production build pass (12 routes).
+
 ## 🚧 In Progress
-- _None_ — Phase 1–2 frontend screens + Agent Reasoning landed.
+- _None_ — all roadmap phases (0–5) have landed in this environment.
 
 ## ⛔ Blocked / Needs human input
 - **Rotate leaked credentials.** The original `.env` held a live Groq key +
   MongoDB Atlas password (now gitignored, code uses proper secret handling).
   These must be rotated in the Groq console + Atlas — a manual operator step.
-- **Phase 3 (OpenClaw browser execution)** depends on an external
-  browser-automation tool not available in this environment. It needs the tool
-  provisioned (or a chosen library, e.g. Playwright) before it can be built and
-  verified end-to-end — deferred rather than built blind.
+- **Real-money execution (Phase 3 live mode)** is intentionally unbuilt and
+  refused by the executor. A vetted broker integration, credential handling, and
+  explicit operator opt-in are prerequisites — out of scope to build blind. Paper
+  + demo modes are fully implemented. (Playwright is referenced lazily; install
+  it + browser binaries to exercise demo-mode screenshots.)
 - **Optional, not blocking:** persistent LangGraph checkpointer. In-process
   `MemorySaver` is used today (sufficient single-process); a durable saver can be
   injected via `app/agent/checkpoint.set_checkpointer` when multi-process scaling
   is needed. (The heavy `langgraph-checkpoint-mongodb` dep was evaluated and
   rejected — it downgraded pymongo and pulled numpy/sqlalchemy.)
 
-## ⏭️ Next (per master prompt roadmap)
+## ⏭️ Next (post-roadmap)
 
-### Phase 3 — Autonomous Execution
-- OpenClaw `browser_executor.py` (demo + paper modes, screenshots, audit evidence).
-
-### Phase 4 — Wealth OS
-- Digital Twin (income/expenses/loans/SIPs/emergency fund/goals), Goal-Based
-  Investing, Personal CFO layer.
-
-### Phase 5 — Institutional Intelligence
-- CIO agent (final authority), multi-strategy council, Memory agent, Learning agent,
-  Decision Review.
-
-### Cross-cutting
-- Frontend screens for Phase 1–2 ✅ done (Market Intelligence, Agent Reasoning,
-  Execution Center, Portfolio health/regime/simulation, Settings).
-- Personal CFO layer + wiring `liquidity_pressure` into CIO/risk reasoning.
-- Maintain the 80%+ coverage target as agents land.
+The master-prompt roadmap (Phases 0–5) is complete. Remaining enhancements:
+- **Decision Review** UI — a richer per-decision drill-down beyond the reasoning
+  trace (outcome attribution, memory timeline per ticker).
+- **Live execution** once a broker integration is provisioned (see Blocked).
+- Maintain the 80%+ coverage target as features land.
