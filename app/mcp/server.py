@@ -1,183 +1,59 @@
-import os
-from typing import Any, Dict
+"""MCP transport shim for Vestra's data-access layer.
 
-from dotenv import load_dotenv
-from motor.motor_asyncio import AsyncIOMotorClient
+History: this module used to contain the persistence logic decorated as MCP
+tools, but the FastAPI request path imported and awaited those functions
+directly -- it never spoke the MCP protocol. The logic now lives in
+``app/data/repository.py`` (the real DAL) and the client factory in
+``app/data/mongo.py``.
+
+This file keeps two contracts intact:
+
+1. **Direct imports** -- ``from app.mcp.server import get_profile`` (and the
+   other four functions) still work and return plain coroutines, because we
+   re-export the repository callables unchanged. The agent nodes depend on this.
+2. **MCP transport** -- the same functions are registered as MCP tools so the
+   server can still be run as a standalone MCP endpoint via ``python -m
+   app.mcp.server`` (``mcp.run()`` under ``__main__``).
+"""
+
 from mcp.server.fastmcp import FastMCP
 
-load_dotenv()
+# Client factory now lives in app.data.mongo; re-export for backward compat.
+from app.data.mongo import get_client, get_db, set_client
 
-MONGODB_URI = os.getenv("MONGODB_URI")
-DATABASE_NAME = os.getenv("DATABASE_NAME", "vestra")
-
-client = AsyncIOMotorClient(MONGODB_URI)
-db = client[DATABASE_NAME]
+# The real persistence logic. Re-exported under the same names so existing
+# ``from app.mcp.server import <fn>`` imports keep returning plain coroutines.
+from app.data.repository import (
+    execute_trade,
+    get_market_exposure,
+    get_profile,
+    log_reasoning,
+    reject_trade,
+)
 
 mcp = FastMCP("vestra-mcp")
 
-
-@mcp.tool()
-async def get_profile(user_id: str) -> Dict[str, Any]:
-    try:
-        profile = await db.investor_profiles.find_one({"user_id": user_id})
-
-        if not profile:
-            return {"error": "Profile not found"}
-
-        profile.pop("_id", None)
-        return profile
-
-    except Exception as e:
-        return {"error": str(e)}
+# Register the DAL functions as MCP tools for the optional transport. Decorating
+# the imported callables (rather than redefining them) keeps a single source of
+# truth -- the direct-import re-exports above and the MCP tools are the same code.
+mcp.tool()(get_profile)
+mcp.tool()(get_market_exposure)
+mcp.tool()(execute_trade)
+mcp.tool()(reject_trade)
+mcp.tool()(log_reasoning)
 
 
-@mcp.tool()
-async def get_market_exposure(user_id: str):
-    try:
-        profile = await db.investor_profiles.find_one({"user_id": user_id})
-
-        if not profile:
-            return {"error": "Profile not found"}
-
-        holdings = profile.get("holdings", {})
-        cash = profile.get("cash_balance", 0)
-
-        total_positions = sum(holdings.values())
-
-        tech_names = {"AAPL", "MSFT", "GOOGL", "NVDA", "AMD"}
-        tech_exposure = sum(
-            qty for symbol, qty in holdings.items()
-            if symbol in tech_names
-        )
-
-        concentration = "low"
-
-        if total_positions > 0:
-            ratio = tech_exposure / total_positions
-
-            if ratio > 0.6:
-                concentration = "high"
-            elif ratio > 0.3:
-                concentration = "medium"
-
-        return {
-            "cash_balance": cash,
-            "total_positions": total_positions,
-            "tech_exposure": tech_exposure,
-            "concentration_risk": concentration
-        }
-
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@mcp.tool()
-async def execute_trade(
-    user_id: str,
-    ticker: str,
-    action: str,
-    quantity: int,
-    price: float
-):
-    try:
-        profile = await db.investor_profiles.find_one({"user_id": user_id})
-
-        if not profile:
-            return {"error": "Profile not found"}
-
-        holdings = profile.get("holdings", {})
-        cash_balance = profile.get("cash_balance", 0)
-
-        ticker = ticker.upper()
-        action = action.upper()
-
-        total = quantity * price
-
-        if action == "BUY":
-            if cash_balance < total:
-                return {"error": "Insufficient balance"}
-
-            holdings[ticker] = holdings.get(ticker, 0) + quantity
-            cash_balance -= total
-
-        elif action == "SELL":
-            current = holdings.get(ticker, 0)
-
-            if current < quantity:
-                return {"error": "Insufficient holdings"}
-
-            holdings[ticker] -= quantity
-            cash_balance += total
-
-        else:
-            return {"error": "Invalid action"}
-
-        await db.investor_profiles.update_one(
-            {"user_id": user_id},
-            {
-                "$set": {
-                    "cash_balance": cash_balance,
-                    "holdings": holdings
-                }
-            }
-        )
-
-        return {
-            "status": "success",
-            "ticker": ticker,
-            "action": action,
-            "quantity": quantity,
-            "updated_cash": cash_balance
-        }
-
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@mcp.tool()
-async def reject_trade(
-    user_id: str,
-    ticker: str,
-    reason: str
-):
-    try:
-        result = await db.rejected_trades.insert_one({
-            "user_id": user_id,
-            "ticker": ticker,
-            "reason": reason
-        })
-
-        return {
-            "status": "rejected_logged",
-            "id": str(result.inserted_id)
-        }
-
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@mcp.tool()
-async def log_reasoning(
-    user_id: str,
-    agent_name: str,
-    action: str,
-    payload: dict
-):
-    try:
-        result = await db.agent_audit_logs.insert_one({
-            "user_id": user_id,
-            "agent_name": agent_name,
-            "action": action,
-            "payload": payload
-        })
-
-        return {
-            "status": "logged",
-            "id": str(result.inserted_id)
-        }
-
-    except Exception as e:
-        return {"error": str(e)}
+__all__ = [
+    "mcp",
+    "get_client",
+    "get_db",
+    "set_client",
+    "get_profile",
+    "get_market_exposure",
+    "execute_trade",
+    "reject_trade",
+    "log_reasoning",
+]
 
 
 if __name__ == "__main__":

@@ -1,14 +1,21 @@
+from typing import Optional
+
+from app.agent.pricing import get_reference_price
 from app.models.schemas import TradeDecision, RiskAssessment, ValidationResult
 
 
 def validate_trade_decision(
     decision: TradeDecision,
     risk: RiskAssessment,
-    current_holdings: dict = None
+    current_holdings: dict = None,
+    price: Optional[float] = None
 ) -> ValidationResult:
 
     if current_holdings is None:
         current_holdings = {}
+
+    if price is None:
+        price = get_reference_price(decision.ticker)
 
     if decision.action == "HOLD":
         return ValidationResult(
@@ -29,7 +36,7 @@ def validate_trade_decision(
         )
 
     if decision.action == "BUY":
-        estimated_cost = decision.quantity * 1000
+        estimated_cost = decision.quantity * price
 
         if estimated_cost > risk.cash_available:
             return ValidationResult(

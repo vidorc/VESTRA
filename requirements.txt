@@ -47,9 +47,23 @@ pycparser==3.0
 pydantic==2.13.4
 pydantic-settings==2.14.1
 pydantic_core==2.46.4
+# Required by pydantic EmailStr (auth register/login validation).
+email-validator==2.3.0
 Pygments==2.20.0
 PyJWT==2.13.0
 pymongo==4.17.0
+pytest==9.0.3
+pytest-asyncio==1.4.0
+# Dev tooling: coverage reporting + linting (used by CI).
+pytest-cov==7.1.0
+coverage==7.14.1
+ruff==0.15.15
+# Test-only: in-memory async Mongo for DAL/concurrency tests (no live DB needed).
+mongomock==4.3.0
+mongomock-motor==0.0.36
+# Optional live market data (MARKET_DATA_PROVIDER=yfinance). Heavy (pulls pandas);
+# uncomment to enable. The app falls back to the static price table if absent.
+# yfinance==0.2.51
 python-dotenv==1.2.2
 python-multipart==0.0.29
 python-telegram-bot==22.7
@@ -61,6 +75,8 @@ rich==15.0.0
 rpds-py==0.30.0
 sniffio==1.3.1
 sse-starlette==3.4.4
+# Rate limiting middleware for FastAPI.
+slowapi==0.1.9
 starlette==1.0.1
 tenacity==9.1.4
 typing-inspection==0.4.2

@@ -1,0 +1,26 @@
+# Keep secrets, VCS, caches, and the frontend out of the API image.
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+
+# Frontend (built/deployed separately on Vercel).
+web/
+
+# Docs, plans, local tooling.
+docs/
+*.md
+!README.md
+.claude/
+.idea/
+.vscode/

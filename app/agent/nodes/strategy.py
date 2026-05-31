@@ -1,8 +1,7 @@
-import os
 import json
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
+import re
 
+from app.agent.llm import get_llm, set_llm  # noqa: F401  (set_llm re-exported)
 from app.models.schemas import (
     MarketEvent,
     SignalAssessment,
@@ -10,13 +9,65 @@ from app.models.schemas import (
     TradeDecision
 )
 
-load_dotenv()
+# The LLM client/factory now lives in app.agent.llm so all LLM-backed nodes
+# share one injectable instance. ``get_llm``/``set_llm`` are re-exported here so
+# existing imports (``from app.agent.nodes.strategy import set_llm``) keep working
+# and a single injection covers strategy + research + reflection.
 
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    api_key=os.getenv("GROQ_API_KEY"),
-    temperature=0.2
-)
+
+def _content_to_text(content) -> str:
+    """Normalize a LangChain message ``content`` into a plain string.
+
+    ``content`` may be a string, or a list of content blocks where each block is
+    either a string or a dict (e.g. ``{"type": "text", "text": "..."}``). The
+    previous code did ``content[0]`` and fed a dict straight into ``json.loads``,
+    which raised ``TypeError``.
+    """
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                parts.append(block.get("text") or block.get("content") or "")
+        return "".join(parts)
+
+    return str(content)
+
+
+def _extract_decision(text: str, ticker: str) -> dict:
+    """Parse a trade decision dict from raw LLM text.
+
+    Strips markdown code fences, extracts the first JSON object, and falls back
+    to a safe HOLD if no valid JSON is found. Never raises.
+    """
+    cleaned = text.strip()
+
+    # Strip ```json ... ``` or ``` ... ``` fences if present.
+    fence = re.search(r"```(?:json)?\s*(.*?)```", cleaned, re.DOTALL)
+    if fence:
+        cleaned = fence.group(1).strip()
+
+    # Grab the first {...} block (handles leading/trailing prose).
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    candidate = match.group(0) if match else cleaned
+
+    try:
+        parsed = json.loads(candidate)
+        if isinstance(parsed, dict) and "action" in parsed:
+            return parsed
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    return {
+        "action": "HOLD",
+        "ticker": ticker,
+        "quantity": 0,
+        "reasoning": "Could not parse a structured decision; defaulting to HOLD.",
+    }
 
 
 async def generate_trade_strategy(
@@ -64,13 +115,19 @@ Format:
 }}
 """
 
-    response = await llm.ainvoke(prompt)
+    response = await get_llm().ainvoke(prompt)
 
-    content = response.content
+    text = _content_to_text(response.content)
+    parsed = _extract_decision(text, event.ticker)
 
-    if isinstance(content, list):
-        content = content[0]
-
-    parsed = json.loads(content)
-
-    return TradeDecision(**parsed)
+    try:
+        return TradeDecision(**parsed)
+    except Exception:
+        # LLM returned structurally-parseable JSON but with invalid fields
+        # (e.g. action outside BUY/SELL/HOLD). Fail safe to HOLD.
+        return TradeDecision(
+            action="HOLD",
+            ticker=event.ticker,
+            quantity=0,
+            reasoning="Decision failed validation; defaulting to HOLD.",
+        )
