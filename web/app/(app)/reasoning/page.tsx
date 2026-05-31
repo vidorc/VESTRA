@@ -1,8 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { reasoning, type ReasoningTrace } from "@/lib/api";
-import { Card, Eyebrow } from "@/components/ui/card";
+import { reasoning, type ReasoningTrace, type Evidence } from "@/lib/api";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
@@ -23,6 +24,60 @@ function verdictTone(v?: string): "up" | "warning" | "down" | "neutral" {
   if (v === "questionable") return "down";
   if (v === "acceptable") return "warning";
   return "neutral";
+}
+
+function stanceTone(s?: string): "up" | "down" | "neutral" {
+  if (s === "supports") return "up";
+  if (s === "cautions") return "down";
+  return "neutral";
+}
+
+/** Trust layer: plain-English summary, the evidence behind the call, and the
+ * "why not the other actions" counterfactuals. Leads the card because it's the
+ * human-readable view; the technical pipeline below is the supporting detail. */
+function TrustPanel({
+  explanation,
+}: {
+  explanation: NonNullable<ReasoningTrace["explanation"]>;
+}) {
+  const supporting = explanation.evidence.filter((e) => e.stance === "supports");
+  const cautioning = explanation.evidence.filter((e) => e.stance === "cautions");
+  const ordered: Evidence[] = [
+    ...supporting,
+    ...cautioning,
+    ...explanation.evidence.filter((e) => e.stance === "neutral"),
+  ];
+
+  return (
+    <div className="mt-md rounded-md border border-hairline bg-canvas-soft p-md">
+      <span className="font-mono text-caption uppercase tracking-wide text-mute">
+        Why this call
+      </span>
+      <p className="mt-xxs max-w-prose text-body-sm text-ink">{explanation.summary}</p>
+
+      {ordered.length > 0 && (
+        <ul className="mt-sm space-y-xxs">
+          {ordered.map((e, i) => (
+            <li key={i} className="flex items-baseline gap-xs text-body-sm text-body">
+              <Badge tone={stanceTone(e.stance)}>{e.source}</Badge>
+              <span>{e.detail}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {explanation.why_not.length > 0 && (
+        <div className="mt-sm border-t border-hairline pt-sm">
+          {explanation.why_not.map((w) => (
+            <div key={w.action} className="flex items-baseline gap-xs text-caption text-mute">
+              <span className="font-mono uppercase tracking-wide">Why not {w.action}?</span>
+              <span className="text-body">{w.reason}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** One labelled step in the reasoning pipeline. */
@@ -90,6 +145,9 @@ function TraceCard({ trace }: { trace: ReasoningTrace }) {
           {ts && <p className="mt-xxs font-mono text-caption text-mute">{ts}</p>}
         </div>
       </div>
+
+      {/* Trust layer leads: plain-English account of the decision + why-not. */}
+      {trace.explanation && <TrustPanel explanation={trace.explanation} />}
 
       {/* The 7-stage pipeline, in graph order */}
       <div className="mt-md grid grid-cols-1 gap-sm md:grid-cols-2">
@@ -219,14 +277,11 @@ export default function ReasoningPage() {
 
   return (
     <div className="px-xl py-lg">
-      <div className="mb-lg">
-        <Eyebrow>Decision trace</Eyebrow>
-        <h1 className="mt-xxs text-display-lg text-ink">Agent Reasoning.</h1>
-        <p className="mt-xs text-body-sm text-mute">
-          The full chain behind each decision — signal, research, risk, strategy,
-          reflection, confidence, and validation.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Decision trace"
+        title="Agent Reasoning."
+        description="The full chain behind each decision — a plain-English account of why, the evidence behind it, and why not the alternatives, over the signal-to-validation pipeline."
+      />
 
       {isLoading && <p className="text-body-sm text-body">Loading reasoning traces…</p>}
 

@@ -249,6 +249,25 @@ export interface CIODecision {
   rationale: string;
 }
 
+export interface Evidence {
+  source: string;
+  detail: string;
+  stance: "supports" | "cautions" | "neutral";
+}
+
+export interface WhyNot {
+  action: "BUY" | "SELL" | "HOLD";
+  reason: string;
+}
+
+export interface Explanation {
+  action: "BUY" | "SELL" | "HOLD";
+  summary: string;
+  confidence: number;
+  evidence: Evidence[];
+  why_not: WhyNot[];
+}
+
 export interface ReasoningTrace {
   _id?: string;
   event_id?: string | null;
@@ -263,6 +282,7 @@ export interface ReasoningTrace {
   decision: TradeDecision | null;
   reflection: ReflectionResult | null;
   confidence: ConfidenceScore | null;
+  explanation?: Explanation | null;
   validation: ValidationResult | null;
 }
 

@@ -37,6 +37,7 @@ from app.models.schemas import (
     CIODecision,
     ConfidenceScore,
     CouncilOpinion,
+    Explanation,
     MarketEvent,
     MarketRegime,
     ReflectionResult,
@@ -64,6 +65,7 @@ from app.agent.nodes.approval import run_approval
 from app.agent.nodes.execution import execute_trade_decision
 from app.agent.nodes.learning import learn_from_execution
 from app.services.memory import recall_memory
+from app.services.explanation import explain_decision
 from app.agent.nodes.audit import audit_agent_action
 from app.data.repository import (
     save_reasoning_trace,
@@ -90,6 +92,7 @@ class AgentState(TypedDict, total=False):
     cio: CIODecision
     simulation: SimulationResult
     validation: ValidationResult
+    explanation: Explanation
     approval: dict
     execution_result: dict
     status: str
@@ -231,6 +234,25 @@ async def validator_node(state: AgentState) -> AgentState:
         state.get("holdings", {}),
     )
 
+    # Trust layer: narrate the finished decision into a plain-English explanation
+    # with evidence + why-not counterfactuals. Deterministic and post-hoc -- reads
+    # already-computed state, never alters the decision. Best-effort.
+    explanation = None
+    try:
+        explanation = explain_decision(
+            state["decision"],
+            confidence=state.get("confidence"),
+            signal=state.get("signal"),
+            research=state.get("research_context"),
+            regime=state.get("regime"),
+            risk=state.get("risk"),
+            council=state.get("council"),
+            cio=state.get("cio"),
+            reflection=state.get("reflection"),
+        )
+    except Exception:
+        explanation = None
+
     # Persist the full reasoning trace (best-effort; never break the run). The
     # validator is the last node always reached before branching and is not
     # re-run on resume, so exactly one trace is captured per decision. Maps each
@@ -251,6 +273,7 @@ async def validator_node(state: AgentState) -> AgentState:
             "decision": _dump("decision"),
             "reflection": _dump("reflection"),
             "confidence": _dump("confidence"),
+            "explanation": explanation.model_dump() if explanation is not None else None,
             "validation": validation.model_dump(),
         }
         await save_reasoning_trace(
@@ -259,7 +282,10 @@ async def validator_node(state: AgentState) -> AgentState:
     except Exception:
         pass
 
-    return {"validation": validation}
+    out = {"validation": validation}
+    if explanation is not None:
+        out["explanation"] = explanation
+    return out
 
 
 def route_after_validation(state: AgentState) -> str:

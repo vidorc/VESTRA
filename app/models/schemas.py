@@ -295,4 +295,48 @@ class CIODecision(BaseModel):
     rationale: str = ""
 
 
+# --- Trust layer: plain-English explanation + why-not counterfactuals ----
+
+
+class Evidence(BaseModel):
+    """One piece of evidence behind a recommendation, stated in plain English.
+
+    ``stance`` records whether this signal pushed *toward* deploying/holding the
+    action (``supports``), gave a reason for caution (``cautions``), or was merely
+    contextual (``neutral``). It drives the colour coding on the trust panel.
+    """
+
+    source: str  # e.g. "Signal", "Research", "Market regime", "Risk", "Council", "CIO"
+    detail: str
+    stance: Literal["supports", "cautions", "neutral"] = "neutral"
+
+
+class WhyNot(BaseModel):
+    """Why an alternative action was *not* the recommendation.
+
+    The decision is one of BUY/SELL/HOLD; the trust layer explains each of the two
+    actions that were not chosen, so the user sees the road not taken.
+    """
+
+    action: Literal["BUY", "SELL", "HOLD"]
+    reason: str
+
+
+class Explanation(BaseModel):
+    """The Trust layer over a finished decision.
+
+    A plain-English account of *why* the system landed on ``action``, the concrete
+    ``evidence`` that backed it (drawn from the signal, research, regime, risk,
+    council, and CIO), the ``confidence`` it carries, and ``why_not`` counterfactuals
+    for the two alternatives. Deterministic and post-hoc -- it narrates state that
+    is already computed, so it never changes the decision or the graph flow.
+    """
+
+    action: Literal["BUY", "SELL", "HOLD"]
+    summary: str = ""
+    confidence: float = 0.0
+    evidence: List[Evidence] = []
+    why_not: List[WhyNot] = []
+
+
 
