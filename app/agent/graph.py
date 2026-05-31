@@ -243,6 +243,7 @@ async def validator_node(state: AgentState) -> AgentState:
         trace = {
             "signal": _dump("signal"),
             "research": _dump("research_context"),
+            "regime": _dump("regime"),
             "risk": _dump("risk"),
             "analyst_decision": _dump("analyst_decision"),
             "council": _dump("council"),

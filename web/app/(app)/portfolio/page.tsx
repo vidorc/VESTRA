@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { HealthGauge } from "@/components/ui/health-gauge";
+import { BarSeriesChart, DonutChart, chartTokens, seriesColor } from "@/components/charts/primitives";
+import { Heatmap } from "@/components/charts/heatmap";
 
 function factorTone(score: number): "up" | "warning" | "down" {
   if (score >= 70) return "up";
@@ -15,12 +17,20 @@ function factorTone(score: number): "up" | "warning" | "down" {
   return "down";
 }
 
+const FACTOR_HEX = { up: chartTokens.up, warning: chartTokens.warning, down: chartTokens.down };
+
 export default function PortfolioPage() {
   const portfolioQ = useQuery({ queryKey: ["portfolio"], queryFn: portfolio.get });
   const healthQ = useQuery({ queryKey: ["health"], queryFn: health.get });
   const rebalanceM = useMutation<RebalancePlan>({
     mutationFn: () => rebalance.preview(5),
   });
+
+  const sectors = Object.entries(portfolioQ.data?.exposure.sector_breakdown ?? {}).map(
+    ([sector, count]) => ({ sector, count: Number(count) }),
+  );
+  const factorData =
+    healthQ.data?.factors.map((f) => ({ name: f.name.replace(/_/g, " "), score: f.score })) ?? [];
 
   return (
     <div className="px-xl py-lg">
@@ -41,6 +51,17 @@ export default function PortfolioPage() {
 
         <Card className="lg:col-span-2">
           <Eyebrow>Health Factors</Eyebrow>
+          {factorData.length > 0 && (
+            <BarSeriesChart
+              data={factorData}
+              categoryKey="name"
+              valueKey="score"
+              layout="vertical"
+              height={Math.max(140, factorData.length * 40)}
+              colorFor={(d) => FACTOR_HEX[factorTone(Number(d.score))]}
+              valueFormat={(v) => `${v}`}
+            />
+          )}
           <div className="mt-sm space-y-sm">
             {healthQ.data?.factors.map((f) => (
               <div key={f.name}>
@@ -62,7 +83,7 @@ export default function PortfolioPage() {
         </Card>
       </div>
 
-      {/* Holdings + sectors */}
+      {/* Holdings + allocation */}
       <div className="mt-lg grid grid-cols-1 gap-md lg:grid-cols-2">
         <Card>
           <Eyebrow>Holdings</Eyebrow>
@@ -92,23 +113,52 @@ export default function PortfolioPage() {
 
         <Card>
           <div className="flex items-center justify-between">
-            <Eyebrow>Sector Breakdown</Eyebrow>
+            <Eyebrow>Allocation by Sector</Eyebrow>
             {portfolioQ.data && (
               <Badge tone={portfolioQ.data.exposure.concentration_risk === "high" ? "down" : "neutral"}>
                 {portfolioQ.data.exposure.concentration_risk} concentration
               </Badge>
             )}
           </div>
-          <div className="mt-sm space-y-xs">
-            {Object.entries(portfolioQ.data?.exposure.sector_breakdown ?? {}).map(([s, n]) => (
-              <div key={s} className="flex items-center justify-between">
-                <span className="text-body-sm capitalize text-body">{s}</span>
-                <span className="font-mono text-body-sm tnum text-ink">{n}</span>
+          {sectors.length > 0 ? (
+            <>
+              <DonutChart
+                data={sectors}
+                nameKey="sector"
+                valueKey="count"
+                valueFormat={(v) => `${v} positions`}
+              />
+              <div className="mt-sm grid grid-cols-2 gap-x-md gap-y-xxs">
+                {sectors.map((s, i) => (
+                  <div key={s.sector} className="flex items-center gap-xs">
+                    <span className="h-2 w-2 rounded-full" style={{ background: seriesColor(i) }} />
+                    <span className="text-caption capitalize text-body">{s.sector}</span>
+                    <span className="ml-auto font-mono text-caption tnum text-mute">{s.count}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <p className="mt-sm text-body-sm text-mute">No sector data.</p>
+          )}
         </Card>
       </div>
+
+      {/* Sector concentration heatmap */}
+      {sectors.length > 0 && (
+        <Card className="mt-lg">
+          <Eyebrow>Sector Concentration</Eyebrow>
+          <p className="mt-xxs text-caption text-mute">Darker cells carry heavier exposure.</p>
+          <div className="mt-sm">
+            <Heatmap
+              cells={sectors.map((s) => ({ label: s.sector, value: s.count }))}
+              tone={portfolioQ.data?.exposure.concentration_risk === "high" ? "down" : "warning"}
+              valueFormat={(v) => `${v}`}
+              columns={4}
+            />
+          </div>
+        </Card>
+      )}
 
       {/* Rebalance */}
       <Card className="mt-lg">

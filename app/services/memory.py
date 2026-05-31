@@ -55,4 +55,51 @@ def recent_loss_streak(memory: List[Dict[str, Any]]) -> int:
     return streak
 
 
-__all__ = ["save_decision_memory", "recall_memory", "recent_loss_streak"]
+def memory_analytics(memories: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Roll up a list of agent memories into executive-dashboard analytics.
+
+    Pure/deterministic. Produces overall tallies (total / completed / losses /
+    pending), a win rate over *decided* trades only, and a per-ticker breakdown.
+    Drives the memory-analytics charts.
+    """
+    total = len(memories or [])
+    completed = losses = pending = 0
+    per_ticker: Dict[str, Dict[str, int]] = {}
+
+    for m in memories or []:
+        outcome = m.get("outcome") or {}
+        result = outcome.get("result")
+        if result == "completed":
+            completed += 1
+        elif result == "loss":
+            losses += 1
+        else:
+            pending += 1
+
+        ticker = (m.get("ticker") or "—").upper()
+        bucket = per_ticker.setdefault(ticker, {"total": 0, "completed": 0, "losses": 0})
+        bucket["total"] += 1
+        if result == "completed":
+            bucket["completed"] += 1
+        elif result == "loss":
+            bucket["losses"] += 1
+
+    decided = completed + losses
+    win_rate = round(completed / decided, 4) if decided else 0.0
+
+    by_ticker = [
+        {"ticker": t, **counts}
+        for t, counts in sorted(per_ticker.items(), key=lambda kv: -kv[1]["total"])
+    ]
+
+    return {
+        "total": total,
+        "completed": completed,
+        "losses": losses,
+        "pending": pending,
+        "win_rate": win_rate,
+        "by_ticker": by_ticker,
+    }
+
+
+__all__ = ["save_decision_memory", "recall_memory", "recent_loss_streak", "memory_analytics"]

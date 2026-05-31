@@ -255,6 +255,7 @@ export interface ReasoningTrace {
   ts?: string;
   signal: SignalAssessment | null;
   research: ResearchContext | null;
+  regime?: MarketRegime | null;
   risk: RiskAssessment | null;
   analyst_decision?: TradeDecision | null;
   council?: CouncilOpinion | null;
@@ -263,6 +264,34 @@ export interface ReasoningTrace {
   reflection: ReflectionResult | null;
   confidence: ConfidenceScore | null;
   validation: ValidationResult | null;
+}
+
+// --- Agent memory analytics (Phase 6) ------------------------------------
+
+export interface MemoryRecord {
+  _id?: string;
+  ts?: string;
+  ticker: string;
+  action?: "BUY" | "SELL" | "HOLD";
+  quantity?: number;
+  reasoning?: string;
+  outcome?: { status?: string; result?: "completed" | "loss"; detail?: unknown } | null;
+}
+
+export interface TickerTally {
+  ticker: string;
+  total: number;
+  completed: number;
+  losses: number;
+}
+
+export interface MemoryAnalytics {
+  total: number;
+  completed: number;
+  losses: number;
+  pending: number;
+  win_rate: number;
+  by_ticker: TickerTally[];
 }
 
 export interface DigitalTwin {
@@ -311,6 +340,11 @@ export const simulations = {
 export const reasoning = {
   list: (limit = 50) =>
     api<{ traces: ReasoningTrace[] }>(`/reasoning?limit=${limit}`),
+};
+
+export const memory = {
+  get: (limit = 100) =>
+    api<{ memories: MemoryRecord[]; analytics: MemoryAnalytics }>(`/memory?limit=${limit}`),
 };
 
 export const rebalance = {

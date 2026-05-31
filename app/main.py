@@ -38,6 +38,7 @@ from app.data.repository import (
     get_market_exposure,
     get_profile,
     get_recent_market_events,
+    list_agent_memories,
     list_goals,
     list_reasoning_traces,
     list_simulations,
@@ -46,6 +47,7 @@ from app.data.repository import (
     upsert_digital_twin,
 )
 from app.models.schemas import DigitalTwin, Goal, MarketEvent
+from app.services.memory import memory_analytics
 from app.services.portfolio_health import compute_portfolio_health
 from app.services.rebalancer import preview_rebalance
 from app.agent.nodes.regime import aggregate_regime
@@ -172,6 +174,17 @@ async def reasoning(user_id: str = Depends(get_current_user_id), limit: int = 50
     risk, strategy decision, reflection, confidence, and validation outputs.
     """
     return {"traces": await list_reasoning_traces(user_id, limit=min(limit, 200))}
+
+
+@app.get("/memory")
+async def memory(user_id: str = Depends(get_current_user_id), limit: int = 100):
+    """Return the authenticated user's agent memory timeline + rolled-up analytics.
+
+    Memories are past decisions and their outcomes per ticker; analytics tallies
+    wins/losses, win rate over decided trades, and a per-ticker breakdown.
+    """
+    memories = await list_agent_memories(user_id, limit=min(limit, 500))
+    return {"memories": memories, "analytics": memory_analytics(memories)}
 
 
 @app.post("/rebalance/preview")
