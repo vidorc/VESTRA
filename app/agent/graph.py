@@ -34,7 +34,9 @@ from langgraph.graph import StateGraph, END
 from langgraph.types import Command
 
 from app.models.schemas import (
+    CIODecision,
     ConfidenceScore,
+    CouncilOpinion,
     MarketEvent,
     MarketRegime,
     ReflectionResult,
@@ -54,10 +56,14 @@ from app.agent.nodes.risk import assess_portfolio_risk
 from app.agent.nodes.strategy import generate_trade_strategy
 from app.agent.nodes.reflection import reflect_on_decision
 from app.agent.nodes.confidence import compute_confidence
+from app.agent.nodes.council import convene_council
+from app.agent.nodes.cio import cio_review
 from app.agent.nodes.simulation import run_simulation
 from app.agent.nodes.validator import validate_trade_decision
 from app.agent.nodes.approval import run_approval
 from app.agent.nodes.execution import execute_trade_decision
+from app.agent.nodes.learning import learn_from_execution
+from app.services.memory import recall_memory
 from app.agent.nodes.audit import audit_agent_action
 from app.data.repository import (
     save_reasoning_trace,
@@ -77,8 +83,11 @@ class AgentState(TypedDict, total=False):
     regime: MarketRegime
     risk: RiskAssessment
     decision: TradeDecision
+    analyst_decision: TradeDecision
     reflection: ReflectionResult
     confidence: ConfidenceScore
+    council: CouncilOpinion
+    cio: CIODecision
     simulation: SimulationResult
     validation: ValidationResult
     approval: dict
@@ -159,6 +168,46 @@ async def confidence_node(state: AgentState) -> AgentState:
     return {"confidence": confidence}
 
 
+async def council_node(state: AgentState) -> AgentState:
+    """Convene the multi-strategy council on the analyst's proposed decision."""
+    council = convene_council(
+        state["decision"],
+        state["signal"],
+        state["risk"],
+        state.get("regime") or MarketRegime(),
+    )
+    return {"council": council}
+
+
+async def cio_node(state: AgentState) -> AgentState:
+    """CIO renders the final, authoritative verdict over the analyst decision.
+
+    The analyst's proposal is preserved as ``analyst_decision``; ``decision`` is
+    replaced by the CIO's final call, which the rest of the pipeline (simulation,
+    validation, approval, execution) acts on.
+    """
+    analyst = state["decision"]
+    try:
+        memory = await recall_memory(state["user_id"], analyst.ticker)
+    except Exception:
+        memory = []
+
+    verdict = cio_review(
+        analyst,
+        state["risk"],
+        state.get("confidence") or compute_confidence(
+            analyst, state["risk"], state["signal"], state.get("reflection"), state.get("research_context")
+        ),
+        state["council"],
+        memory,
+    )
+    return {
+        "analyst_decision": analyst,
+        "decision": verdict.final_decision,
+        "cio": verdict,
+    }
+
+
 async def simulation_node(state: AgentState) -> AgentState:
     simulation = await run_simulation(
         state["decision"],
@@ -195,6 +244,9 @@ async def validator_node(state: AgentState) -> AgentState:
             "signal": _dump("signal"),
             "research": _dump("research_context"),
             "risk": _dump("risk"),
+            "analyst_decision": _dump("analyst_decision"),
+            "council": _dump("council"),
+            "cio": _dump("cio"),
             "decision": _dump("decision"),
             "reflection": _dump("reflection"),
             "confidence": _dump("confidence"),
@@ -253,6 +305,10 @@ async def execute_node(state: AgentState) -> AgentState:
         {"decision": decision.model_dump(), "execution": execution},
     )
 
+    # Learning agent: write the outcome back to memory so the CIO can weigh this
+    # ticker's track record on future decisions. Closes the institutional loop.
+    await learn_from_execution(user_id, decision, execution)
+
     return {
         "execution_result": execution,
         "status": "failed" if failed else "success",
@@ -298,6 +354,8 @@ def _build_graph(checkpointer):
     builder.add_node("strategy", strategy_node)
     builder.add_node("reflection", reflection_node)
     builder.add_node("confidence", confidence_node)
+    builder.add_node("council", council_node)
+    builder.add_node("cio", cio_node)
     builder.add_node("simulation", simulation_node)
     builder.add_node("validate", validator_node)
     builder.add_node("approval", approval_node)
@@ -311,7 +369,11 @@ def _build_graph(checkpointer):
     builder.add_edge("risk", "strategy")
     builder.add_edge("strategy", "reflection")
     builder.add_edge("reflection", "confidence")
-    builder.add_edge("confidence", "simulation")
+    # Institutional layer: the council debates the analyst's call, then the CIO
+    # renders the final decision the rest of the pipeline executes.
+    builder.add_edge("confidence", "council")
+    builder.add_edge("council", "cio")
+    builder.add_edge("cio", "simulation")
     builder.add_edge("simulation", "validate")
     builder.add_conditional_edges(
         "validate",

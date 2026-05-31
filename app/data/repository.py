@@ -429,8 +429,33 @@ async def save_research_context(
     return str(result.inserted_id)
 
 
-# --- Reasoning traces ----------------------------------------------------
+# --- Agent memories (Phase 5) --------------------------------------------
 
+async def save_agent_memory(user_id: str, memory: Dict[str, Any]) -> str:
+    """Persist one agent memory (a past decision + optional outcome). Returns its id."""
+    db = get_db()
+    doc = {"user_id": user_id, "ts": _utcnow(), **memory}
+    result = await db.agent_memories.insert_one(doc)
+    return str(result.inserted_id)
+
+
+async def list_agent_memories(
+    user_id: str, ticker: Optional[str] = None, limit: int = 20
+) -> List[Dict[str, Any]]:
+    """List a user's agent memories (newest first), optionally scoped to a ticker."""
+    db = get_db()
+    query: Dict[str, Any] = {"user_id": user_id}
+    if ticker:
+        query["ticker"] = ticker.upper()
+    cursor = db.agent_memories.find(query).sort([("ts", -1), ("_id", -1)]).limit(limit)
+    out = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        out.append(doc)
+    return out
+
+
+# --- Reasoning traces ----------------------------------------------------
 async def save_reasoning_trace(
     user_id: str, trace: Dict[str, Any], event_id: Optional[str] = None
 ) -> str:
@@ -591,6 +616,8 @@ __all__ = [
     "save_simulation_result",
     "list_simulations",
     "save_research_context",
+    "save_agent_memory",
+    "list_agent_memories",
     "save_reasoning_trace",
     "list_reasoning_traces",
     "create_approval_request",

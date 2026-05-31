@@ -256,4 +256,43 @@ class Goal(BaseModel):
         return min(100.0, round(self.current_amount / self.target_amount * 100.0, 1))
 
 
+# --- Phase 5: institutional intelligence ---------------------------------
+
+
+class CouncilView(BaseModel):
+    """One strategy seat's opinion on the analyst's proposed trade."""
+
+    strategy: str  # e.g. "momentum", "contrarian", "risk_averse", "macro"
+    action: Literal["BUY", "SELL", "HOLD"]
+    rationale: str = ""
+
+
+class CouncilOpinion(BaseModel):
+    """The multi-strategy council's aggregated read.
+
+    ``consensus_action`` is the plurality vote across seats; ``dissent`` (0-1) is
+    the fraction of seats that disagree with it -- a measure of how split the room
+    is. The CIO weighs strong, low-dissent consensus heavily.
+    """
+
+    views: List[CouncilView] = []
+    consensus_action: Literal["BUY", "SELL", "HOLD"] = "HOLD"
+    dissent: float = 0.0
+    rationale: str = ""
+
+
+class CIODecision(BaseModel):
+    """The CIO's final, authoritative verdict over the analyst decision.
+
+    The CIO is the last word: it may pass the analyst decision through, downsize
+    it, or veto it to HOLD. ``vetoed`` marks a confidence/risk kill; ``overrode``
+    marks the council consensus overriding the analyst's action.
+    """
+
+    final_decision: TradeDecision
+    vetoed: bool = False
+    overrode: bool = False
+    rationale: str = ""
+
+
 

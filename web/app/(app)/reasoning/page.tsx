@@ -146,6 +146,33 @@ function TraceCard({ trace }: { trace: ReasoningTrace }) {
           </Step>
         )}
 
+        {trace.council && (
+          <Step label="Council">
+            <span className="flex items-center gap-xs">
+              <Badge tone={actionTone(trace.council.consensus_action)}>
+                {trace.council.consensus_action}
+              </Badge>
+              <span className="font-mono text-caption text-mute">
+                {Math.round((1 - trace.council.dissent) * 100)}% agree
+              </span>
+            </span>
+            <p className="mt-xxs text-caption text-mute">{trace.council.rationale}</p>
+          </Step>
+        )}
+
+        {trace.cio && (
+          <Step label="CIO (final)">
+            <span className="flex items-center gap-xs">
+              <Badge tone={actionTone(trace.cio.final_decision.action)}>
+                {trace.cio.final_decision.action} {trace.cio.final_decision.quantity || ""}
+              </Badge>
+              {trace.cio.vetoed && <Badge tone="down">vetoed</Badge>}
+              {trace.cio.overrode && <Badge tone="warning">overrode</Badge>}
+            </span>
+            <p className="mt-xxs text-caption text-mute">{trace.cio.rationale}</p>
+          </Step>
+        )}
+
         {trace.validation && (
           <Step label="Validation">
             <Badge tone={trace.validation.approved ? "up" : "down"}>

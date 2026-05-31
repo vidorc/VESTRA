@@ -229,6 +229,26 @@ export interface ValidationResult {
   reason: string;
 }
 
+export interface CouncilView {
+  strategy: string;
+  action: "BUY" | "SELL" | "HOLD";
+  rationale: string;
+}
+
+export interface CouncilOpinion {
+  views: CouncilView[];
+  consensus_action: "BUY" | "SELL" | "HOLD";
+  dissent: number;
+  rationale: string;
+}
+
+export interface CIODecision {
+  final_decision: TradeDecision;
+  vetoed: boolean;
+  overrode: boolean;
+  rationale: string;
+}
+
 export interface ReasoningTrace {
   _id?: string;
   event_id?: string | null;
@@ -236,6 +256,9 @@ export interface ReasoningTrace {
   signal: SignalAssessment | null;
   research: ResearchContext | null;
   risk: RiskAssessment | null;
+  analyst_decision?: TradeDecision | null;
+  council?: CouncilOpinion | null;
+  cio?: CIODecision | null;
   decision: TradeDecision | null;
   reflection: ReflectionResult | null;
   confidence: ConfidenceScore | null;
