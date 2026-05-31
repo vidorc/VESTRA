@@ -4,7 +4,7 @@ Living status of the V2 build. Updated at each checkpoint. See
 `docs/VESTRA_V2_MASTER_PROMPT.md` for the full vision and `docs/ARCHITECTURE.md`
 for the system as built.
 
-_Last updated: Phase 2 complete._
+_Last updated: Phase 1–2 frontend + Agent Reasoning complete._
 
 ## ✅ Completed
 
@@ -56,8 +56,19 @@ _Last updated: Phase 2 complete._
   powers the Health Engine's previously-stubbed `goal_alignment` factor.
 - 137 tests, ruff clean, ~83% coverage. See `docs/PHASE4_DIGITAL_TWIN.md`.
 
+### Frontend screens + Agent Reasoning
+- **Phase 1–2 screens wired to live data**: Market Intelligence (regime +
+  simulations), Execution Center (pending approvals, approve/reject HITL),
+  Portfolio (health gauge, factors, holdings, sectors, rebalance preview),
+  Settings (Digital Twin + goals CRUD); new `web/components/ui` primitives.
+- **Agent Reasoning** (new `reasoning_traces` collection + `GET /reasoning`):
+  the validator node persists one full trace per decision — signal, research,
+  risk, strategy decision, reflection, confidence, validation — and the
+  `/reasoning` screen renders each as the 7-stage pipeline in graph order.
+- 144 tests, ruff clean. Frontend typecheck + production build pass (12 routes).
+
 ## 🚧 In Progress
-- _None_ — Phase 2 done; Phase 4 Digital Twin/Goals foundation landed.
+- _None_ — Phase 1–2 frontend screens + Agent Reasoning landed.
 
 ## ⛔ Blocked / Needs human input
 - **Rotate leaked credentials.** The original `.env` held a live Groq key +
@@ -87,6 +98,7 @@ _Last updated: Phase 2 complete._
   Decision Review.
 
 ### Cross-cutting
-- Frontend screens for Phase 1–2 (Market Intelligence, Agent Reasoning, Execution
-  Center, Portfolio health/regime/simulation views, Settings).
+- Frontend screens for Phase 1–2 ✅ done (Market Intelligence, Agent Reasoning,
+  Execution Center, Portfolio health/regime/simulation, Settings).
+- Personal CFO layer + wiring `liquidity_pressure` into CIO/risk reasoning.
 - Maintain the 80%+ coverage target as agents land.
