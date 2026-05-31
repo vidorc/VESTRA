@@ -18,12 +18,22 @@ from app.services.memory import save_decision_memory
 
 
 def _classify_outcome(execution: Dict[str, Any]) -> Dict[str, Any]:
-    """Map a raw execution result into a memory outcome record."""
+    """Map a raw execution result into a memory outcome record.
+
+    A successful fill is ``completed``; a failed/errored execution is a ``loss``
+    (capital wasn't deployed as intended). A HOLD reaches here as ``no_action`` —
+    it is neither a win nor a loss and must NOT count toward the win rate.
+    """
     status = execution.get("status") if isinstance(execution, dict) else None
-    failed = (isinstance(execution, dict) and "error" in execution) or status in ("failed", None)
+    if status == "no_action":
+        result = "no_action"
+    elif (isinstance(execution, dict) and "error" in execution) or status in ("failed", None):
+        result = "loss"
+    else:
+        result = "completed"
     return {
         "status": status or "failed",
-        "result": "loss" if failed else "completed",
+        "result": result,
         "detail": execution if isinstance(execution, dict) else {},
     }
 

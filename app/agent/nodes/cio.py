@@ -74,9 +74,10 @@ def cio_review(
         quantity = risk.safe_trade_limit
         notes.append(f"clamped to safe limit {risk.safe_trade_limit}")
 
-    # ... and downsize after a recent losing streak on this ticker.
+    # ... and downsize after a recent losing streak on this ticker. Only applies
+    # to a real position — a HOLD (quantity 0) must stay 0, never floor up to 1.
     streak = recent_loss_streak(memory)
-    if streak >= _LOSS_STREAK_TRIGGER:
+    if streak >= _LOSS_STREAK_TRIGGER and quantity > 0:
         factor = max(0.25, 1.0 - _LOSS_DOWNSIZE_STEP * streak)
         quantity = max(1, int(quantity * factor))
         notes.append(f"downsized after {streak} recent losses")

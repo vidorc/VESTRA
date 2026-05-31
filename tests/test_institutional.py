@@ -179,6 +179,17 @@ def test_cio_downsizes_after_repeated_recent_losses():
     assert verdict.final_decision.action == "BUY"
 
 
+def test_cio_does_not_resurrect_hold_into_a_trade():
+    """A HOLD must stay quantity 0 even with a losing streak (downsizing must not floor to 1)."""
+    from app.agent.nodes.cio import cio_review
+
+    council = CouncilOpinion(views=[], consensus_action="HOLD", dissent=0.0)
+    losing_memory = [{"ticker": "RELIANCE", "outcome": {"result": "loss"}} for _ in range(3)]
+    verdict = cio_review(_decision("HOLD", qty=0), _risk(limit=20), _conf(0.85), council, memory=losing_memory)
+    assert verdict.final_decision.action == "HOLD"
+    assert verdict.final_decision.quantity == 0
+
+
 # --- Learning node -------------------------------------------------------
 
 async def test_learning_records_outcome_to_memory(mongo):
@@ -192,6 +203,21 @@ async def test_learning_records_outcome_to_memory(mongo):
     recalled = await recall_memory("u1", "RELIANCE")
     assert len(recalled) == 1
     assert recalled[0]["outcome"]["status"] == "success"
+
+
+async def test_learning_hold_is_not_counted_as_a_win(mongo):
+    """A HOLD (no_action execution) must not be recorded as a completed/won trade."""
+    from app.agent.nodes.learning import learn_from_execution
+    from app.services.memory import memory_analytics, recall_memory
+
+    await learn_from_execution(
+        "u1", _decision("HOLD", ticker="RELIANCE", qty=0), {"status": "no_action"}
+    )
+    recalled = await recall_memory("u1", "RELIANCE")
+    assert len(recalled) == 1
+    # A no-action HOLD is neither a win nor a loss — it must not inflate the win rate.
+    assert recalled[0]["outcome"]["result"] != "completed"
+    assert memory_analytics(recalled)["completed"] == 0
 
 
 # --- graph integration ---------------------------------------------------
