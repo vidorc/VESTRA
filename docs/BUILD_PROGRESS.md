@@ -4,7 +4,7 @@ Living status of the V2 build. Updated at each checkpoint. See
 `docs/VESTRA_V2_MASTER_PROMPT.md` for the full vision and `docs/ARCHITECTURE.md`
 for the system as built.
 
-_Last updated: Phase 1 complete._
+_Last updated: Phase 2 complete._
 
 ## ✅ Completed
 
@@ -33,8 +33,20 @@ _Last updated: Phase 1 complete._
 - Graph rewired with checkpointer; legacy result contract preserved
   (`pending_approval` additive). 89 tests, ruff clean, ~79% coverage.
 
+### Phase 2 — Portfolio Intelligence
+- **Portfolio Health Engine** (`services/portfolio_health.py`) → 0–100 score
+  (diversification, concentration, liquidity, volatility, goal alignment) +
+  `GET /portfolio/health`.
+- **Market Regime agent** (`nodes/regime.py`) → bull/bear/sideways/high-vol/crisis;
+  wired pre-strategy (research→regime→risk); `GET /market/regime`.
+- **Scenario Simulation agent** (`nodes/simulation.py`) → best/base/worst,
+  drawdown, expected return, risk score; persisted; `GET /simulations`.
+- **Rebalancer** (`services/rebalancer.py`) → drift detection + corrective plan;
+  `POST /rebalance/preview`.
+- 127 tests, ruff clean, ~81% coverage (past the 80% target).
+
 ## 🚧 In Progress
-- _None_ — Phase 1 closed. Ready for Phase 2.
+- _None_ — Phase 2 closed. Ready for Phase 3.
 
 ## ⛔ Blocked / Needs human input
 - **Rotate leaked credentials.** The original `.env` held a live Groq key +
@@ -48,14 +60,6 @@ _Last updated: Phase 1 complete._
 
 ## ⏭️ Next (per master prompt roadmap)
 
-### Phase 2 — Portfolio Intelligence
-- Portfolio Health Engine (0–100 score: diversification, liquidity, concentration,
-  drawdown, volatility, goal alignment).
-- Market Regime agent (bull/bear/sideways/high-vol/crisis), pre-strategy.
-- Scenario Simulation agent (best/base/worst, drawdown, expected return).
-- Rebalancer agent (allocation/sector/exposure corrections).
-- Frontend: Portfolio screen, health gauge, regime banner, sector heatmap.
-
 ### Phase 3 — Autonomous Execution
 - OpenClaw `browser_executor.py` (demo + paper modes, screenshots, audit evidence).
 
@@ -68,6 +72,6 @@ _Last updated: Phase 1 complete._
   Decision Review.
 
 ### Cross-cutting
-- Remaining frontend screens (Market Intelligence, Agent Reasoning, Execution
-  Center, Settings).
-- Drive toward the 80%+ coverage target as agents land.
+- Frontend screens for Phase 1–2 (Market Intelligence, Agent Reasoning, Execution
+  Center, Portfolio health/regime/simulation views, Settings).
+- Maintain the 80%+ coverage target as agents land.

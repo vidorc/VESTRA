@@ -2,12 +2,15 @@
 
 An AI Wealth Operating System for Indian retail investors. Vestra ingests market
 events and runs them through a LangGraph agent pipeline to produce disciplined,
-auditable, per-user investment decisions — with research enrichment, self-critique,
-confidence scoring, and a human-in-the-loop approval gate.
+auditable, per-user investment decisions — with research enrichment, market-regime
+detection, scenario simulation, self-critique, confidence scoring, and a
+human-in-the-loop approval gate. It also scores portfolio health and previews
+rebalancing.
 
-> Phases 0 (hardening) and 1 (intelligence + approval) are complete. See
-> `docs/ARCHITECTURE.md` (system as built), `docs/PHASE1.md` (approval layer),
-> `docs/BUILD_PROGRESS.md` (status), `DESIGN.md` (frontend design system), and
+> Phases 0 (hardening), 1 (intelligence + approval), and 2 (portfolio
+> intelligence) are complete. See `docs/ARCHITECTURE.md` (system as built),
+> `docs/PHASE1.md` and `docs/PHASE2.md` (feature layers), `docs/BUILD_PROGRESS.md`
+> (status), `DESIGN.md` (frontend design system), and
 > `docs/VESTRA_V2_MASTER_PROMPT.md` (full vision + roadmap).
 
 ## Architecture

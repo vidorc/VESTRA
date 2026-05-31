@@ -34,9 +34,14 @@ from app.data.repository import (
     get_audit_logs,
     get_market_exposure,
     get_profile,
+    get_recent_market_events,
+    list_simulations,
     record_market_event,
 )
 from app.models.schemas import MarketEvent
+from app.services.portfolio_health import compute_portfolio_health
+from app.services.rebalancer import preview_rebalance
+from app.agent.nodes.regime import aggregate_regime
 
 logger = logging.getLogger("vestra")
 
@@ -117,7 +122,51 @@ async def portfolio(user_id: str = Depends(get_current_user_id)):
     return {"profile": profile, "exposure": exposure}
 
 
+@app.get("/portfolio/health")
+async def portfolio_health(user_id: str = Depends(get_current_user_id)):
+    """Return the authenticated user's 0-100 portfolio health score + factors."""
+    profile = await get_profile(user_id)
+    if isinstance(profile, dict) and "error" in profile:
+        return JSONResponse(status_code=404, content={"status": "error", "detail": profile["error"]})
+    health = await compute_portfolio_health(
+        holdings=profile.get("holdings", {}),
+        cash_balance=profile.get("cash_balance", 0.0),
+        target_allocation=profile.get("target_allocation", {}),
+        goals=profile.get("goals"),
+    )
+    return health.model_dump()
+
+
 @app.get("/audit")
 async def audit(user_id: str = Depends(get_current_user_id), limit: int = 100):
     """Return the authenticated user's recent agent audit-log entries."""
     return {"logs": await get_audit_logs(user_id, limit=min(limit, 500))}
+
+
+@app.get("/market/regime")
+async def market_regime(user_id: str = Depends(get_current_user_id)):
+    """Return the current market-wide regime aggregated from recent events."""
+    events = await get_recent_market_events(limit=25)
+    return aggregate_regime(events).model_dump()
+
+
+@app.get("/simulations")
+async def simulations(user_id: str = Depends(get_current_user_id), limit: int = 50):
+    """Return the authenticated user's recent scenario-simulation results."""
+    return {"simulations": await list_simulations(user_id, limit=min(limit, 200))}
+
+
+@app.post("/rebalance/preview")
+async def rebalance_preview(
+    user_id: str = Depends(get_current_user_id), drift_threshold_pct: float = 5.0
+):
+    """Preview a rebalance plan correcting drift vs. the user's target allocation."""
+    profile = await get_profile(user_id)
+    if isinstance(profile, dict) and "error" in profile:
+        return JSONResponse(status_code=404, content={"status": "error", "detail": profile["error"]})
+    plan = await preview_rebalance(
+        holdings=profile.get("holdings", {}),
+        target_allocation=profile.get("target_allocation", {}),
+        drift_threshold_pct=max(0.0, min(drift_threshold_pct, 100.0)),
+    )
+    return plan.model_dump()

@@ -124,3 +124,74 @@ class ApprovalRequest(BaseModel):
     status: Literal["pending", "approved", "rejected"] = "pending"
     reason: Optional[str] = None
 
+
+# --- Phase 2: portfolio intelligence -------------------------------------
+
+
+class HealthFactor(BaseModel):
+    """One scored dimension of portfolio health (0-100) with a short note."""
+
+    name: str
+    score: float
+    weight: float
+    note: str = ""
+
+
+class PortfolioHealth(BaseModel):
+    """Overall portfolio health (0-100) plus the factors that produced it."""
+
+    score: float = 0.0
+    band: Literal["poor", "fair", "good", "excellent"] = "fair"
+    factors: List[HealthFactor] = []
+
+
+# Market regimes the regime agent can detect.
+MarketRegimeType = Literal[
+    "bull", "bear", "sideways", "high_volatility", "crisis"
+]
+
+
+class MarketRegime(BaseModel):
+    """Detected market regime with a confidence and rationale."""
+
+    regime: MarketRegimeType = "sideways"
+    confidence: float = 0.0
+    rationale: str = ""
+
+
+class ScenarioOutcome(BaseModel):
+    """A single scenario projection for a proposed trade."""
+
+    name: Literal["best", "base", "worst"]
+    probability: float
+    expected_return_pct: float
+    portfolio_impact: float  # absolute INR impact on portfolio value
+
+
+class SimulationResult(BaseModel):
+    """Best/base/worst scenario projections for a decision."""
+
+    scenarios: List[ScenarioOutcome] = []
+    expected_return_pct: float = 0.0
+    expected_drawdown_pct: float = 0.0
+    risk_score: float = 0.0  # 0-1, higher == riskier
+    upside_pct: float = 0.0
+
+
+class RebalanceAction(BaseModel):
+    """A single suggested corrective trade to restore target allocation."""
+
+    ticker: str
+    action: Literal["BUY", "SELL"]
+    quantity: int
+    reason: str
+
+
+class RebalancePlan(BaseModel):
+    """A drift-correction plan derived from target vs. current allocation."""
+
+    drift_detected: bool = False
+    actions: List[RebalanceAction] = []
+    notes: str = ""
+
+

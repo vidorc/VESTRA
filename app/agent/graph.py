@@ -36,10 +36,12 @@ from langgraph.types import Command
 from app.models.schemas import (
     ConfidenceScore,
     MarketEvent,
+    MarketRegime,
     ReflectionResult,
     ResearchContext,
     RiskAssessment,
     SignalAssessment,
+    SimulationResult,
     TradeDecision,
     ValidationResult,
 )
@@ -47,15 +49,17 @@ from app.mcp.server import get_profile
 from app.agent.checkpoint import get_checkpointer
 from app.agent.nodes.signal import classify_market_event
 from app.agent.nodes.research import generate_research_context
+from app.agent.nodes.regime import detect_regime
 from app.agent.nodes.risk import assess_portfolio_risk
 from app.agent.nodes.strategy import generate_trade_strategy
 from app.agent.nodes.reflection import reflect_on_decision
 from app.agent.nodes.confidence import compute_confidence
+from app.agent.nodes.simulation import run_simulation
 from app.agent.nodes.validator import validate_trade_decision
 from app.agent.nodes.approval import run_approval
 from app.agent.nodes.execution import execute_trade_decision
 from app.agent.nodes.audit import audit_agent_action
-from app.data.repository import save_research_context
+from app.data.repository import save_research_context, save_simulation_result
 
 
 class AgentState(TypedDict, total=False):
@@ -66,10 +70,12 @@ class AgentState(TypedDict, total=False):
     holdings: dict
     signal: SignalAssessment
     research_context: ResearchContext
+    regime: MarketRegime
     risk: RiskAssessment
     decision: TradeDecision
     reflection: ReflectionResult
     confidence: ConfidenceScore
+    simulation: SimulationResult
     validation: ValidationResult
     approval: dict
     execution_result: dict
@@ -94,6 +100,13 @@ async def research_node(state: AgentState) -> AgentState:
     except Exception:
         pass
     return {"research_context": research}
+
+
+async def regime_node(state: AgentState) -> AgentState:
+    regime = detect_regime(
+        state["event"], state["signal"], state.get("research_context")
+    )
+    return {"regime": regime}
 
 
 async def risk_node(state: AgentState) -> AgentState:
@@ -140,6 +153,22 @@ async def confidence_node(state: AgentState) -> AgentState:
         state.get("research_context"),
     )
     return {"confidence": confidence}
+
+
+async def simulation_node(state: AgentState) -> AgentState:
+    simulation = await run_simulation(
+        state["decision"],
+        regime=state.get("regime"),
+        risk=state.get("risk"),
+    )
+    # Persist the simulation (best-effort; never break the run).
+    try:
+        await save_simulation_result(
+            state["user_id"], simulation.model_dump(), event_id=state.get("event_id")
+        )
+    except Exception:
+        pass
+    return {"simulation": simulation}
 
 
 async def validator_node(state: AgentState) -> AgentState:
@@ -235,10 +264,12 @@ def _build_graph(checkpointer):
 
     builder.add_node("signal", signal_node)
     builder.add_node("research", research_node)
+    builder.add_node("regime", regime_node)
     builder.add_node("risk", risk_node)
     builder.add_node("strategy", strategy_node)
     builder.add_node("reflection", reflection_node)
     builder.add_node("confidence", confidence_node)
+    builder.add_node("simulation", simulation_node)
     builder.add_node("validate", validator_node)
     builder.add_node("approval", approval_node)
     builder.add_node("execute", execute_node)
@@ -246,11 +277,13 @@ def _build_graph(checkpointer):
 
     builder.set_entry_point("signal")
     builder.add_edge("signal", "research")
-    builder.add_edge("research", "risk")
+    builder.add_edge("research", "regime")
+    builder.add_edge("regime", "risk")
     builder.add_edge("risk", "strategy")
     builder.add_edge("strategy", "reflection")
     builder.add_edge("reflection", "confidence")
-    builder.add_edge("confidence", "validate")
+    builder.add_edge("confidence", "simulation")
+    builder.add_edge("simulation", "validate")
     builder.add_conditional_edges(
         "validate",
         route_after_validation,

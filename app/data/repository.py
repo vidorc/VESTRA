@@ -309,6 +309,40 @@ async def find_impacted_user_ids(ticker: str, impacted_assets: Optional[list] = 
     return [doc["user_id"] async for doc in cursor]
 
 
+async def get_recent_market_events(limit: int = 25) -> List[Dict[str, Any]]:
+    """Return the most recent market events (newest first) for regime aggregation."""
+    db = get_db()
+    cursor = db.market_events.find().sort("_id", -1).limit(limit)
+    out = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        out.append(doc)
+    return out
+
+
+# --- Simulation results --------------------------------------------------
+
+async def save_simulation_result(
+    user_id: str, simulation: Dict[str, Any], event_id: Optional[str] = None
+) -> str:
+    """Persist a scenario-simulation result for a user/event. Returns its id."""
+    db = get_db()
+    doc = {"user_id": user_id, "event_id": event_id, "ts": _utcnow(), **simulation}
+    result = await db.simulation_results.insert_one(doc)
+    return str(result.inserted_id)
+
+
+async def list_simulations(user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    """List a user's simulation results, newest first."""
+    db = get_db()
+    cursor = db.simulation_results.find({"user_id": user_id}).sort("ts", -1).limit(limit)
+    out = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        out.append(doc)
+    return out
+
+
 # --- Research context ----------------------------------------------------
 
 async def save_research_context(
@@ -442,6 +476,9 @@ __all__ = [
     "get_audit_logs",
     "record_market_event",
     "find_impacted_user_ids",
+    "get_recent_market_events",
+    "save_simulation_result",
+    "list_simulations",
     "save_research_context",
     "create_approval_request",
     "get_approval",
