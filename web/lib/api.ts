@@ -346,6 +346,28 @@ export interface DecisionReview {
   highlights: string[];
 }
 
+// --- Risk Stress Testing (named macro shocks on the whole book) ----------
+
+export interface StressScenario {
+  name: string;
+  label: string;
+  value_before: number;
+  value_after: number;
+  loss: number;
+  loss_pct: number;
+  worst_sector?: string | null;
+  note: string;
+}
+
+export interface StressTestResult {
+  portfolio_value: number;
+  invested_value: number;
+  scenarios: StressScenario[];
+  worst_case_loss_pct: number;
+  resilience: "robust" | "moderate" | "fragile";
+  note: string;
+}
+
 export interface DigitalTwin {
   age?: number | null;
   annual_income: number;
@@ -401,6 +423,10 @@ export const memory = {
 
 export const review = {
   get: (limit = 200) => api<DecisionReview>(`/review?limit=${limit}`),
+};
+
+export const risk = {
+  stress: () => api<StressTestResult>("/risk/stress"),
 };
 
 export const rebalance = {

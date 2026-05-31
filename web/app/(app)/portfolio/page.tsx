@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { health, portfolio, rebalance, type RebalancePlan } from "@/lib/api";
+import { health, portfolio, rebalance, risk, type RebalancePlan } from "@/lib/api";
 import { inr } from "@/lib/utils";
 import { Card, Eyebrow } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -18,11 +18,18 @@ function factorTone(score: number): "up" | "warning" | "down" {
   return "down";
 }
 
+function resilienceTone(r: string): "up" | "warning" | "down" {
+  if (r === "robust") return "up";
+  if (r === "moderate") return "warning";
+  return "down";
+}
+
 const FACTOR_HEX = { up: chartTokens.up, warning: chartTokens.warning, down: chartTokens.down };
 
 export default function PortfolioPage() {
   const portfolioQ = useQuery({ queryKey: ["portfolio"], queryFn: portfolio.get });
   const healthQ = useQuery({ queryKey: ["health"], queryFn: health.get });
+  const stressQ = useQuery({ queryKey: ["risk-stress"], queryFn: risk.stress });
   const rebalanceM = useMutation<RebalancePlan>({
     mutationFn: () => rebalance.preview(5),
   });
@@ -157,6 +164,56 @@ export default function PortfolioPage() {
           </div>
         </Card>
       )}
+
+      {/* Risk stress test: named macro shocks applied to the whole book */}
+      <Card className="mt-lg">
+        <div className="flex items-center justify-between">
+          <Eyebrow>Risk Stress Test</Eyebrow>
+          {stressQ.data && (
+            <Badge tone={resilienceTone(stressQ.data.resilience)}>
+              {stressQ.data.resilience}
+            </Badge>
+          )}
+        </div>
+        {stressQ.isLoading && <p className="mt-sm text-body-sm text-mute">Running shocks…</p>}
+        {stressQ.data && stressQ.data.scenarios.length === 0 && (
+          <p className="mt-sm text-body-sm text-mute">{stressQ.data.note}</p>
+        )}
+        {stressQ.data && stressQ.data.scenarios.length > 0 && (
+          <>
+            <p className="mt-xxs text-caption text-mute">
+              How the book holds up under macro shocks · worst case −
+              {stressQ.data.worst_case_loss_pct}% of {inr(stressQ.data.portfolio_value)}
+            </p>
+            <div className="mt-sm space-y-sm">
+              {stressQ.data.scenarios.map((s) => (
+                <div key={s.name}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-body-sm text-body">{s.label}</span>
+                    <span className="font-mono text-body-sm tnum text-down">
+                      −{inr(s.loss)} <span className="text-mute">(−{s.loss_pct}%)</span>
+                    </span>
+                  </div>
+                  <Progress
+                    value={Math.min(100, s.loss_pct * 2)}
+                    tone={s.loss_pct >= 25 ? "down" : s.loss_pct >= 12 ? "warning" : "up"}
+                    className="mt-xxs"
+                  />
+                  <p className="mt-xxs text-caption text-mute">
+                    {s.note}
+                    {s.worst_sector && (
+                      <span className="ml-xs capitalize">· hardest hit: {s.worst_sector}</span>
+                    )}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-sm border-t border-hairline pt-sm text-body-sm text-body">
+              {stressQ.data.note}
+            </p>
+          </>
+        )}
+      </Card>
 
       {/* Rebalance */}
       <Card className="mt-lg">

@@ -389,4 +389,37 @@ class DecisionReview(BaseModel):
     highlights: List[str] = []
 
 
+# --- Risk Stress Testing: named macro shocks applied to the whole book ----
+
+
+class StressScenario(BaseModel):
+    """The projected impact of one named macro shock on the portfolio."""
+
+    name: str  # e.g. "market_drop_5", "rbi_surprise", "sector_crash"
+    label: str  # human-readable, e.g. "Market falls 15%"
+    value_before: float = 0.0
+    value_after: float = 0.0
+    loss: float = 0.0  # absolute INR loss (positive == loss)
+    loss_pct: float = 0.0  # % of portfolio value lost
+    worst_sector: Optional[str] = None  # sector hit hardest in this scenario
+    note: str = ""
+
+
+class StressTestResult(BaseModel):
+    """A pre-trade risk stress test: how the book holds up under macro shocks.
+
+    Applies a fixed set of named shocks (broad market drops, an RBI rate
+    surprise, a single-sector crash) to current holdings using per-sector
+    sensitivities, and reports the projected loss under each. Deterministic --
+    the same holdings + prices always yield the same stress test.
+    """
+
+    portfolio_value: float = 0.0
+    invested_value: float = 0.0  # holdings only, excludes cash
+    scenarios: List[StressScenario] = []
+    worst_case_loss_pct: float = 0.0
+    resilience: Literal["robust", "moderate", "fragile"] = "robust"
+    note: str = ""
+
+
 

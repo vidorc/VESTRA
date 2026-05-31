@@ -49,6 +49,7 @@ from app.data.repository import (
 from app.models.schemas import DigitalTwin, Goal, MarketEvent
 from app.services.memory import memory_analytics
 from app.services.review import review_decisions
+from app.services.stress import run_stress_test
 from app.services.portfolio_health import compute_portfolio_health
 from app.services.rebalancer import preview_rebalance
 from app.agent.nodes.regime import aggregate_regime
@@ -214,6 +215,24 @@ async def rebalance_preview(
         drift_threshold_pct=max(0.0, min(drift_threshold_pct, 100.0)),
     )
     return plan.model_dump()
+
+
+@app.get("/risk/stress")
+async def risk_stress(user_id: str = Depends(get_current_user_id)):
+    """Stress-test the authenticated user's portfolio against named macro shocks.
+
+    Applies broad market drops (5% / 15%), an RBI rate surprise, and a
+    largest-sector crash to current holdings using per-sector sensitivities,
+    and reports the projected loss + an overall resilience read. Deterministic.
+    """
+    profile = await get_profile(user_id)
+    if isinstance(profile, dict) and "error" in profile:
+        return JSONResponse(status_code=404, content={"status": "error", "detail": profile["error"]})
+    result = await run_stress_test(
+        holdings=profile.get("holdings", {}),
+        cash=profile.get("cash_balance", 0.0),
+    )
+    return result.model_dump()
 
 
 # --- Digital twin & goals (Phase 4) --------------------------------------
