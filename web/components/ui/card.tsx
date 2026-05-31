@@ -11,7 +11,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-lg border border-hairline bg-canvas-soft p-lg shadow-level-3",
+        "rounded-lg border border-hairline bg-canvas-soft p-lg shadow-level-3 transition-colors duration-200 hover:border-hairline-strong/70",
         className,
       )}
     >

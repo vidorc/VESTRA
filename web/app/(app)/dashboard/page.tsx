@@ -17,17 +17,25 @@ export default function DashboardPage() {
 
   return (
     <div className="px-xl py-lg">
-      <div className="mb-lg flex items-start justify-between">
+      <div className="mb-lg flex flex-wrap items-end justify-between gap-md border-b border-hairline pb-md">
         <div>
           <Eyebrow>Overview</Eyebrow>
           <h1 className="mt-xxs text-display-lg text-ink">Dashboard.</h1>
         </div>
-        {regimeQ.data && (
-          <div className="flex items-center gap-xs">
-            <span className="font-mono text-caption uppercase text-mute">Market regime</span>
-            <RegimeBadge regime={regimeQ.data.regime} />
-          </div>
-        )}
+        <div className="flex items-center gap-md">
+          {regimeQ.data && (
+            <div className="flex items-center gap-xs">
+              <span className="font-mono text-caption uppercase tracking-wide text-mute">
+                Market regime
+              </span>
+              <RegimeBadge regime={regimeQ.data.regime} />
+            </div>
+          )}
+          <span className="flex items-center gap-xs font-mono text-caption text-mute">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-up" />
+            live
+          </span>
+        </div>
       </div>
 
       {isLoading && <p className="text-body text-body-sm">Loading portfolio…</p>}
