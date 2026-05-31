@@ -1,21 +1,33 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { portfolio } from "@/lib/api";
+import { portfolio, health, market } from "@/lib/api";
 import { inr } from "@/lib/utils";
 import { Card, Eyebrow, Stat } from "@/components/ui/card";
+import { HealthGauge } from "@/components/ui/health-gauge";
+import { RegimeBadge } from "@/components/ui/regime-badge";
 
 export default function DashboardPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["portfolio"],
     queryFn: portfolio.get,
   });
+  const healthQ = useQuery({ queryKey: ["health"], queryFn: health.get });
+  const regimeQ = useQuery({ queryKey: ["regime"], queryFn: market.regime });
 
   return (
     <div className="px-xl py-lg">
-      <div className="mb-lg">
-        <Eyebrow>Overview</Eyebrow>
-        <h1 className="mt-xxs text-display-lg text-ink">Dashboard.</h1>
+      <div className="mb-lg flex items-start justify-between">
+        <div>
+          <Eyebrow>Overview</Eyebrow>
+          <h1 className="mt-xxs text-display-lg text-ink">Dashboard.</h1>
+        </div>
+        {regimeQ.data && (
+          <div className="flex items-center gap-xs">
+            <span className="font-mono text-caption uppercase text-mute">Market regime</span>
+            <RegimeBadge regime={regimeQ.data.regime} />
+          </div>
+        )}
       </div>
 
       {isLoading && <p className="text-body text-body-sm">Loading portfolio…</p>}
@@ -30,7 +42,14 @@ export default function DashboardPage() {
 
       {data && (
         <>
-          <div className="grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-md lg:grid-cols-4">
+            <Card className="flex items-center justify-center lg:row-span-1">
+              {healthQ.data ? (
+                <HealthGauge value={healthQ.data.score} band={healthQ.data.band} size={120} />
+              ) : (
+                <p className="text-caption text-mute">Health —</p>
+              )}
+            </Card>
             <Stat label="Cash Balance" value={inr(data.exposure.cash_balance)} />
             <Stat
               label="Open Positions"
@@ -42,10 +61,6 @@ export default function DashboardPage() {
               value={data.exposure.concentration_risk}
               tone={data.exposure.concentration_risk === "high" ? "down" : "default"}
               hint={data.exposure.largest_sector ?? undefined}
-            />
-            <Stat
-              label="Risk Tolerance"
-              value={data.profile.risk_tolerance}
             />
           </div>
 

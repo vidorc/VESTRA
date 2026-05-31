@@ -10,19 +10,20 @@ import {
   ScrollText,
   PieChart,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearToken } from "@/lib/auth";
 
-// The six screens from the product brief. Only Dashboard is live in Phase 0;
-// the rest are routed placeholders that later phases fill in.
+// Sidebar nav. `ready` marks screens wired to live backend data.
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, ready: true },
-  { href: "/market", label: "Market Intelligence", icon: Activity, ready: false },
+  { href: "/market", label: "Market Intelligence", icon: Activity, ready: true },
   { href: "/reasoning", label: "Agent Reasoning", icon: Brain, ready: false },
-  { href: "/execution", label: "Execution", icon: PlayCircle, ready: false },
+  { href: "/execution", label: "Execution", icon: PlayCircle, ready: true },
+  { href: "/portfolio", label: "Portfolio", icon: PieChart, ready: true },
   { href: "/audit", label: "Audit", icon: ScrollText, ready: true },
-  { href: "/portfolio", label: "Portfolio", icon: PieChart, ready: false },
+  { href: "/settings", label: "Settings", icon: Settings, ready: true },
 ];
 
 export function Sidebar() {
