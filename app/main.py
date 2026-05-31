@@ -38,6 +38,7 @@ from app.data.repository import (
     get_market_exposure,
     get_profile,
     get_recent_market_events,
+    list_agent_events,
     list_agent_memories,
     list_goals,
     list_reasoning_traces,
@@ -48,6 +49,7 @@ from app.data.repository import (
 )
 from app.models.schemas import DigitalTwin, Goal, MarketEvent
 from app.services.memory import memory_analytics
+from app.services.observability import build_observability_report
 from app.services.review import review_decisions
 from app.services.stress import run_stress_test
 from app.services.portfolio_health import compute_portfolio_health
@@ -199,6 +201,18 @@ async def review(user_id: str = Depends(get_current_user_id), limit: int = 200):
     """
     memories = await list_agent_memories(user_id, limit=min(limit, 500))
     return review_decisions(memories).model_dump()
+
+
+@app.get("/observability")
+async def observability(user_id: str = Depends(get_current_user_id), limit: int = 500):
+    """Return an agent-monitoring report over recent node-execution spans.
+
+    A deterministic roll-up of per-node timing + error rates across the graph:
+    run counts, error rate, average/max latency per node, plus overall totals
+    and the slowest node. Powers the agent observability dashboard.
+    """
+    events = await list_agent_events(user_id, limit=min(limit, 2000))
+    return build_observability_report(events).model_dump()
 
 
 @app.post("/rebalance/preview")

@@ -491,6 +491,35 @@ async def list_reasoning_traces(user_id: str, limit: int = 50) -> List[Dict[str,
     return out
 
 
+# --- Agent observability (node execution spans) --------------------------
+async def save_agent_event(user_id: str, event: Dict[str, Any]) -> str:
+    """Persist one node-execution span for observability. Returns its id.
+
+    A span records a single graph node's run: its name, duration, status, and an
+    optional error. Written best-effort by the instrumented node wrapper — it
+    must never break the workflow.
+    """
+    db = get_db()
+    doc = {"user_id": user_id, "ts": _utcnow(), **event}
+    result = await db.agent_events.insert_one(doc)
+    return str(result.inserted_id)
+
+
+async def list_agent_events(user_id: str, limit: int = 500) -> List[Dict[str, Any]]:
+    """List a user's recent node-execution spans, newest first."""
+    db = get_db()
+    cursor = (
+        db.agent_events.find({"user_id": user_id})
+        .sort([("ts", -1), ("_id", -1)])
+        .limit(limit)
+    )
+    out = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        out.append(doc)
+    return out
+
+
 # --- Approval requests ---------------------------------------------------
 
 async def create_approval_request(
@@ -620,6 +649,8 @@ __all__ = [
     "list_agent_memories",
     "save_reasoning_trace",
     "list_reasoning_traces",
+    "save_agent_event",
+    "list_agent_events",
     "create_approval_request",
     "get_approval",
     "get_approval_by_thread",

@@ -27,8 +27,9 @@ Backward compatibility
 Audit logging happens inside the terminal nodes (``execute``/``reject``), as before.
 """
 
+import time
 import uuid
-from typing import Optional, TypedDict
+from typing import Awaitable, Callable, Optional, TypedDict
 
 from langgraph.graph import StateGraph, END
 from langgraph.types import Command
@@ -68,6 +69,7 @@ from app.services.memory import recall_memory
 from app.services.explanation import explain_decision
 from app.agent.nodes.audit import audit_agent_action
 from app.data.repository import (
+    save_agent_event,
     save_reasoning_trace,
     save_research_context,
     save_simulation_result,
@@ -97,6 +99,49 @@ class AgentState(TypedDict, total=False):
     execution_result: dict
     status: str
     reason: Optional[str]
+
+
+# --- Observability -------------------------------------------------------
+
+def _instrument(name: str, fn: Callable[["AgentState"], Awaitable[dict]]):
+    """Wrap a node so each execution records a timing/status span.
+
+    Times the node, records one ``agent_events`` span (node, duration, ok/error),
+    and preserves behaviour exactly: the node's result is returned on success; on
+    error the span is recorded and the exception re-raised so the graph's own
+    error handling is unchanged. Span persistence is best-effort and never breaks
+    the run (a failed write is swallowed).
+    """
+
+    async def wrapped(state: "AgentState") -> dict:
+        user_id = state.get("user_id", "")
+        start = time.perf_counter()
+        status = "ok"
+        error = None
+        try:
+            return await fn(state)
+        except Exception as exc:  # record then re-raise — behaviour unchanged
+            status = "error"
+            error = f"{type(exc).__name__}: {exc}"
+            raise
+        finally:
+            duration_ms = round((time.perf_counter() - start) * 1000.0, 2)
+            try:
+                await save_agent_event(
+                    user_id,
+                    {
+                        "node": name,
+                        "duration_ms": duration_ms,
+                        "status": status,
+                        "error": error,
+                        "event_id": state.get("event_id"),
+                        "thread_id": state.get("thread_id"),
+                    },
+                )
+            except Exception:
+                pass  # observability must never break the workflow
+
+    return wrapped
 
 
 # --- Nodes ---------------------------------------------------------------
@@ -374,20 +419,20 @@ async def reject_node(state: AgentState) -> AgentState:
 def _build_graph(checkpointer):
     builder = StateGraph(AgentState)
 
-    builder.add_node("signal", signal_node)
-    builder.add_node("research", research_node)
-    builder.add_node("regime", regime_node)
-    builder.add_node("risk", risk_node)
-    builder.add_node("strategy", strategy_node)
-    builder.add_node("reflection", reflection_node)
-    builder.add_node("confidence", confidence_node)
-    builder.add_node("council", council_node)
-    builder.add_node("cio", cio_node)
-    builder.add_node("simulation", simulation_node)
-    builder.add_node("validate", validator_node)
-    builder.add_node("approval", approval_node)
-    builder.add_node("execute", execute_node)
-    builder.add_node("reject", reject_node)
+    builder.add_node("signal", _instrument("signal", signal_node))
+    builder.add_node("research", _instrument("research", research_node))
+    builder.add_node("regime", _instrument("regime", regime_node))
+    builder.add_node("risk", _instrument("risk", risk_node))
+    builder.add_node("strategy", _instrument("strategy", strategy_node))
+    builder.add_node("reflection", _instrument("reflection", reflection_node))
+    builder.add_node("confidence", _instrument("confidence", confidence_node))
+    builder.add_node("council", _instrument("council", council_node))
+    builder.add_node("cio", _instrument("cio", cio_node))
+    builder.add_node("simulation", _instrument("simulation", simulation_node))
+    builder.add_node("validate", _instrument("validate", validator_node))
+    builder.add_node("approval", _instrument("approval", approval_node))
+    builder.add_node("execute", _instrument("execute", execute_node))
+    builder.add_node("reject", _instrument("reject", reject_node))
 
     builder.set_entry_point("signal")
     builder.add_edge("signal", "research")

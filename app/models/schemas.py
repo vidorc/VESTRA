@@ -422,4 +422,35 @@ class StressTestResult(BaseModel):
     note: str = ""
 
 
+# --- Agent Observability: per-node timing, failures, retries -------------
+
+
+class NodeStat(BaseModel):
+    """Rolled-up execution stats for one graph node over a window of runs."""
+
+    node: str
+    runs: int = 0
+    errors: int = 0
+    error_rate: float = 0.0
+    avg_ms: float = 0.0
+    max_ms: float = 0.0
+    last_status: Literal["ok", "error"] = "ok"
+
+
+class ObservabilityReport(BaseModel):
+    """Agent monitoring roll-up: how the graph's nodes are performing.
+
+    Deterministic aggregate over recorded node spans (one per node execution):
+    per-node run counts, error rates, and latency, plus overall totals. Powers
+    the agent-monitoring dashboard.
+    """
+
+    total_runs: int = 0  # total node executions observed
+    total_errors: int = 0
+    error_rate: float = 0.0
+    avg_ms: float = 0.0
+    slowest_node: Optional[str] = None
+    nodes: List[NodeStat] = []
+
+
 

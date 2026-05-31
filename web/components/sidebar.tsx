@@ -13,6 +13,7 @@ import {
   Settings,
   BarChart3,
   History,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearToken } from "@/lib/auth";
@@ -39,6 +40,7 @@ const SECTIONS = [
       { href: "/execution", label: "Execution", icon: PlayCircle, ready: true },
       { href: "/portfolio", label: "Portfolio", icon: PieChart, ready: true },
       { href: "/audit", label: "Audit", icon: ScrollText, ready: true },
+      { href: "/observability", label: "Observability", icon: Gauge, ready: true },
     ],
   },
   {

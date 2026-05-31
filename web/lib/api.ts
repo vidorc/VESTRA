@@ -368,6 +368,27 @@ export interface StressTestResult {
   note: string;
 }
 
+// --- Agent Observability (per-node timing, errors) -----------------------
+
+export interface NodeStat {
+  node: string;
+  runs: number;
+  errors: number;
+  error_rate: number;
+  avg_ms: number;
+  max_ms: number;
+  last_status: "ok" | "error";
+}
+
+export interface ObservabilityReport {
+  total_runs: number;
+  total_errors: number;
+  error_rate: number;
+  avg_ms: number;
+  slowest_node?: string | null;
+  nodes: NodeStat[];
+}
+
 export interface DigitalTwin {
   age?: number | null;
   annual_income: number;
@@ -427,6 +448,10 @@ export const review = {
 
 export const risk = {
   stress: () => api<StressTestResult>("/risk/stress"),
+};
+
+export const observability = {
+  get: (limit = 500) => api<ObservabilityReport>(`/observability?limit=${limit}`),
 };
 
 export const rebalance = {
