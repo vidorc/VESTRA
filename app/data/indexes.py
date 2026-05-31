@@ -39,6 +39,10 @@ _INDEXES: List[Tuple[str, List[Tuple[str, int]], dict]] = [
         [("user_id", ASCENDING), ("status", ASCENDING), ("ts", DESCENDING)],
         {"name": "user_status_ts"},
     ),
+    # Phase 4: digital twin (one per user) + goals.
+    ("digital_twins", [("user_id", ASCENDING)], {"unique": True, "name": "uq_user_id"}),
+    ("goals", [("user_id", ASCENDING), ("ts", DESCENDING)], {"name": "user_ts"}),
+    ("goals", [("user_id", ASCENDING), ("goal_id", ASCENDING)], {"name": "user_goal"}),
 ]
 
 

@@ -22,7 +22,24 @@ Factors (weighted):
 from typing import Dict, List, Optional
 
 from app.agent.sectors import assess_concentration
-from app.models.schemas import HealthFactor, PortfolioHealth
+from app.models.schemas import Goal, HealthFactor, PortfolioHealth
+from app.services.goals import goal_alignment_score
+
+
+def _coerce_goals(goals: Optional[list]) -> List[Goal]:
+    """Normalize raw goal dicts (from Mongo) into Goal models; drop invalid ones."""
+    out: List[Goal] = []
+    for g in goals or []:
+        if isinstance(g, Goal):
+            out.append(g)
+            continue
+        if isinstance(g, dict):
+            try:
+                out.append(Goal(**{k: v for k, v in g.items() if k not in ("_id",)}))
+            except Exception:
+                continue
+    return out
+
 
 # (factor name -> weight). Weights sum to 1.0.
 _WEIGHTS = {
@@ -122,8 +139,11 @@ def score_portfolio_health(
     # Volatility: neutral default (no price history wired yet). Accepts override.
     vol_score = 60.0 if volatility_score is None else _clamp_score(volatility_score)
 
-    # Goal alignment: neutral until goals exist (Phase 4 Digital Twin).
-    goal_score = 50.0 if not goals else 50.0
+    # Goal alignment: real priority-weighted funding score (Phase 4). Neutral
+    # 50 when no goals are set, so health is unchanged until the user adds goals.
+    goal_objs = _coerce_goals(goals)
+    goal_score = goal_alignment_score(goal_objs)
+    goal_note = "no goals set" if not goal_objs else f"{len(goal_objs)} goal(s) tracked"
 
     factors: List[HealthFactor] = [
         HealthFactor(name="diversification", score=div_score, weight=_WEIGHTS["diversification"], note=div_note),
@@ -136,7 +156,7 @@ def score_portfolio_health(
         ),
         HealthFactor(name="liquidity", score=liq_score, weight=_WEIGHTS["liquidity"], note=liq_note),
         HealthFactor(name="volatility", score=vol_score, weight=_WEIGHTS["volatility"], note="neutral default (no price history)"),
-        HealthFactor(name="goal_alignment", score=goal_score, weight=_WEIGHTS["goal_alignment"], note="no goals set"),
+        HealthFactor(name="goal_alignment", score=goal_score, weight=_WEIGHTS["goal_alignment"], note=goal_note),
     ]
 
     overall = _clamp_score(sum(f.score * f.weight for f in factors))

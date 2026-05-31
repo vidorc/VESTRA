@@ -30,15 +30,21 @@ from app.config import ConfigError
 from app.core.lifespan import lifespan
 from app.core.security import install_security, limiter
 from app.data.repository import (
+    create_goal,
+    delete_goal,
     find_impacted_user_ids,
     get_audit_logs,
+    get_digital_twin,
     get_market_exposure,
     get_profile,
     get_recent_market_events,
+    list_goals,
     list_simulations,
     record_market_event,
+    update_goal,
+    upsert_digital_twin,
 )
-from app.models.schemas import MarketEvent
+from app.models.schemas import DigitalTwin, Goal, MarketEvent
 from app.services.portfolio_health import compute_portfolio_health
 from app.services.rebalancer import preview_rebalance
 from app.agent.nodes.regime import aggregate_regime
@@ -128,11 +134,12 @@ async def portfolio_health(user_id: str = Depends(get_current_user_id)):
     profile = await get_profile(user_id)
     if isinstance(profile, dict) and "error" in profile:
         return JSONResponse(status_code=404, content={"status": "error", "detail": profile["error"]})
+    goals = await list_goals(user_id)
     health = await compute_portfolio_health(
         holdings=profile.get("holdings", {}),
         cash_balance=profile.get("cash_balance", 0.0),
         target_allocation=profile.get("target_allocation", {}),
-        goals=profile.get("goals"),
+        goals=goals,
     )
     return health.model_dump()
 
@@ -170,3 +177,54 @@ async def rebalance_preview(
         drift_threshold_pct=max(0.0, min(drift_threshold_pct, 100.0)),
     )
     return plan.model_dump()
+
+
+# --- Digital twin & goals (Phase 4) --------------------------------------
+
+
+@app.get("/digital-twin")
+async def get_twin(user_id: str = Depends(get_current_user_id)):
+    """Return the authenticated user's financial digital twin (or null if unset)."""
+    twin = await get_digital_twin(user_id)
+    return {"digital_twin": twin}
+
+
+@app.put("/digital-twin")
+async def put_twin(twin: DigitalTwin, user_id: str = Depends(get_current_user_id)):
+    """Create or update the authenticated user's digital twin."""
+    stored = await upsert_digital_twin(user_id, twin.model_dump())
+    return {"digital_twin": stored}
+
+
+@app.get("/goals")
+async def get_goals(user_id: str = Depends(get_current_user_id)):
+    """List the authenticated user's financial goals."""
+    return {"goals": await list_goals(user_id)}
+
+
+@app.post("/goals", status_code=201)
+async def post_goal(goal: Goal, user_id: str = Depends(get_current_user_id)):
+    """Create a financial goal for the authenticated user."""
+    # The repository assigns the goal_id; ignore any client-supplied one.
+    payload = goal.model_dump(exclude={"goal_id"})
+    created = await create_goal(user_id, payload)
+    created.pop("_id", None)
+    return {"goal": created}
+
+
+@app.put("/goals/{goal_id}")
+async def put_goal(goal_id: str, updates: dict, user_id: str = Depends(get_current_user_id)):
+    """Update a goal owned by the authenticated user."""
+    updated = await update_goal(user_id, goal_id, updates)
+    if not updated:
+        return JSONResponse(status_code=404, content={"status": "error", "detail": "Goal not found."})
+    return {"goal": updated}
+
+
+@app.delete("/goals/{goal_id}")
+async def remove_goal(goal_id: str, user_id: str = Depends(get_current_user_id)):
+    """Delete a goal owned by the authenticated user."""
+    ok = await delete_goal(user_id, goal_id)
+    if not ok:
+        return JSONResponse(status_code=404, content={"status": "error", "detail": "Goal not found."})
+    return {"status": "deleted", "goal_id": goal_id}

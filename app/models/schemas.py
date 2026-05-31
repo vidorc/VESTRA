@@ -195,3 +195,62 @@ class RebalancePlan(BaseModel):
     notes: str = ""
 
 
+# --- Phase 4: digital twin & goal-based investing ------------------------
+
+
+class DigitalTwin(BaseModel):
+    """A financial model of the investor — the context every decision reasons against.
+
+    Vestra stops being a stock bot when it can say "preserve cash, you need
+    liquidity in 8 months" instead of just "SELL". All monetary fields are INR.
+    """
+
+    age: Optional[int] = None
+    annual_income: float = 0.0
+    monthly_expenses: float = 0.0
+    monthly_emi: float = 0.0  # total loan/EMI outflow per month
+    monthly_sip: float = 0.0  # recurring investment outflow per month
+    emergency_fund: float = 0.0  # liquid cash set aside for emergencies
+    tax_bracket: float = 0.0  # marginal rate as a fraction, e.g. 0.30
+    risk_profile: Literal["conservative", "moderate", "aggressive"] = "moderate"
+
+    @property
+    def monthly_surplus(self) -> float:
+        """Income left after expenses, EMIs, and SIPs (monthly)."""
+        return self.annual_income / 12.0 - self.monthly_expenses - self.monthly_emi - self.monthly_sip
+
+    @property
+    def recommended_emergency_fund(self) -> float:
+        """A 6-month expense buffer (expenses + EMIs) is the standard target."""
+        return 6.0 * (self.monthly_expenses + self.monthly_emi)
+
+
+# Goal types Vestra aligns the portfolio against.
+GoalType = Literal[
+    "retirement",
+    "house",
+    "education",
+    "emergency_fund",
+    "wealth_growth",
+]
+
+
+class Goal(BaseModel):
+    """A financial goal the portfolio is steered toward."""
+
+    goal_id: Optional[str] = None
+    type: GoalType
+    name: str = ""
+    target_amount: float
+    current_amount: float = 0.0
+    target_date: Optional[str] = None  # ISO date string
+    priority: Literal["low", "medium", "high"] = "medium"
+
+    @property
+    def progress_pct(self) -> float:
+        if self.target_amount <= 0:
+            return 100.0
+        return min(100.0, round(self.current_amount / self.target_amount * 100.0, 1))
+
+
+

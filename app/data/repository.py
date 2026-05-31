@@ -343,6 +343,80 @@ async def list_simulations(user_id: str, limit: int = 50) -> List[Dict[str, Any]
     return out
 
 
+# --- Digital twin --------------------------------------------------------
+
+async def upsert_digital_twin(user_id: str, twin: Dict[str, Any]) -> Dict[str, Any]:
+    """Create or update the user's financial digital twin (one per user)."""
+    db = get_db()
+    await db.digital_twins.update_one(
+        {"user_id": user_id},
+        {"$set": {**twin, "user_id": user_id, "updated_at": _utcnow()}},
+        upsert=True,
+    )
+    doc = await db.digital_twins.find_one({"user_id": user_id})
+    if doc:
+        doc["_id"] = str(doc["_id"])
+    return doc or {}
+
+
+async def get_digital_twin(user_id: str) -> Optional[Dict[str, Any]]:
+    """Return the user's digital twin, or None if not yet set."""
+    db = get_db()
+    doc = await db.digital_twins.find_one({"user_id": user_id})
+    if doc:
+        doc["_id"] = str(doc["_id"])
+    return doc
+
+
+# --- Goals ---------------------------------------------------------------
+
+async def create_goal(user_id: str, goal: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a financial goal for a user. Returns the stored goal (with goal_id)."""
+    import uuid
+
+    db = get_db()
+    goal_id = uuid.uuid4().hex
+    doc = {**goal, "goal_id": goal_id, "user_id": user_id, "ts": _utcnow()}
+    await db.goals.insert_one(doc)
+    doc["_id"] = str(doc["_id"]) if "_id" in doc else None
+    return doc
+
+
+async def list_goals(user_id: str) -> List[Dict[str, Any]]:
+    """List a user's goals, newest first."""
+    db = get_db()
+    cursor = db.goals.find({"user_id": user_id}).sort("ts", -1)
+    out = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        out.append(doc)
+    return out
+
+
+async def update_goal(
+    user_id: str, goal_id: str, updates: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
+    """Update a user's goal (ownership-scoped). Returns the updated goal or None."""
+    db = get_db()
+    # Never allow the caller to move the goal to another user / change its id.
+    updates = {k: v for k, v in updates.items() if k not in ("user_id", "goal_id", "_id")}
+    doc = await db.goals.find_one_and_update(
+        {"user_id": user_id, "goal_id": goal_id},
+        {"$set": updates},
+        return_document=ReturnDocument.AFTER,
+    )
+    if doc:
+        doc["_id"] = str(doc["_id"])
+    return doc
+
+
+async def delete_goal(user_id: str, goal_id: str) -> bool:
+    """Delete a user's goal (ownership-scoped). Returns True if one was removed."""
+    db = get_db()
+    result = await db.goals.delete_one({"user_id": user_id, "goal_id": goal_id})
+    return result.deleted_count > 0
+
+
 # --- Research context ----------------------------------------------------
 
 async def save_research_context(
@@ -485,4 +559,10 @@ __all__ = [
     "get_approval_by_thread",
     "list_approvals",
     "update_approval_status",
+    "upsert_digital_twin",
+    "get_digital_twin",
+    "create_goal",
+    "list_goals",
+    "update_goal",
+    "delete_goal",
 ]

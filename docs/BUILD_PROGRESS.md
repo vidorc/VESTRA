@@ -45,13 +45,28 @@ _Last updated: Phase 2 complete._
   `POST /rebalance/preview`.
 - 127 tests, ruff clean, ~81% coverage (past the 80% target).
 
+### Phase 4 (partial) — Digital Twin & Goal-Based Investing
+- **Digital Twin** (`DigitalTwin` schema, `digital_twins` collection): income,
+  expenses, EMIs, SIPs, emergency fund, tax bracket, risk profile; computed
+  `monthly_surplus` + `recommended_emergency_fund`. `GET`/`PUT /digital-twin`.
+- **Goals** (`Goal` schema, `goals` collection): retirement/house/education/
+  emergency_fund/wealth_growth; ownership-scoped CRUD (`/goals`, `/goals/{id}`).
+- **Goals service** (`services/goals.py`): `goal_alignment_score`,
+  `liquidity_need`, `liquidity_pressure` (deterministic). The alignment score now
+  powers the Health Engine's previously-stubbed `goal_alignment` factor.
+- 137 tests, ruff clean, ~83% coverage. See `docs/PHASE4_DIGITAL_TWIN.md`.
+
 ## 🚧 In Progress
-- _None_ — Phase 2 closed. Ready for Phase 3.
+- _None_ — Phase 2 done; Phase 4 Digital Twin/Goals foundation landed.
 
 ## ⛔ Blocked / Needs human input
 - **Rotate leaked credentials.** The original `.env` held a live Groq key +
   MongoDB Atlas password (now gitignored, code uses proper secret handling).
   These must be rotated in the Groq console + Atlas — a manual operator step.
+- **Phase 3 (OpenClaw browser execution)** depends on an external
+  browser-automation tool not available in this environment. It needs the tool
+  provisioned (or a chosen library, e.g. Playwright) before it can be built and
+  verified end-to-end — deferred rather than built blind.
 - **Optional, not blocking:** persistent LangGraph checkpointer. In-process
   `MemorySaver` is used today (sufficient single-process); a durable saver can be
   injected via `app/agent/checkpoint.set_checkpointer` when multi-process scaling
