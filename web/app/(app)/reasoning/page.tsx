@@ -98,6 +98,20 @@ function TraceCard({ trace }: { trace: ReasoningTrace }) {
         {trace.risk && (
           <Step label="Risk">
             <span className="capitalize">{trace.risk.concentration_risk} concentration</span>
+            {trace.risk.liquidity_pressure && (
+              <Badge
+                tone={
+                  trace.risk.liquidity_pressure === "high"
+                    ? "down"
+                    : trace.risk.liquidity_pressure === "medium"
+                      ? "warning"
+                      : "neutral"
+                }
+                className="ml-xs"
+              >
+                {trace.risk.liquidity_pressure} liquidity
+              </Badge>
+            )}
             <p className="mt-xxs font-mono text-caption text-mute">
               safe limit {trace.risk.safe_trade_limit}
             </p>

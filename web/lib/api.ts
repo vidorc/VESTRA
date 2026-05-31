@@ -213,6 +213,7 @@ export interface RiskAssessment {
   cash_available: number;
   safe_trade_limit: number;
   notes?: string | null;
+  liquidity_pressure?: "low" | "medium" | "high";
 }
 
 export interface ReflectionResult {

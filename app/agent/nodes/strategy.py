@@ -95,6 +95,7 @@ RISK PROFILE:
 Cash Available: ₹{risk.cash_available}
 Concentration Risk: {risk.concentration_risk}
 Safe Trade Limit: {risk.safe_trade_limit}
+Liquidity Pressure: {risk.liquidity_pressure}
 Notes: {risk.notes}
 
 Rules:
@@ -102,6 +103,8 @@ Rules:
 - Moderate investors reduce risk rationally
 - Aggressive investors can take calculated opportunities
 - NEVER exceed safe trade limit
+- When liquidity pressure is high, preserve capital: prefer HOLD or trimming
+  exposure over deploying cash into new positions
 - HOLD if uncertainty is high
 - Think like a disciplined Indian portfolio manager
 - Return ONLY JSON

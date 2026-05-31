@@ -42,6 +42,9 @@ class RiskAssessment(BaseModel):
     cash_available: float
     safe_trade_limit: int
     notes: Optional[str] = None
+    # Personal CFO signal: near-term cash need vs. portfolio value (low/medium/high).
+    # Biases the decision toward capital preservation when high.
+    liquidity_pressure: Literal["low", "medium", "high"] = "low"
 
 
 class TradeDecision(BaseModel):
