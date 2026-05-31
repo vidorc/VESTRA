@@ -1,6 +1,100 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/**
+ * Vestra dark terminal theme — Tailwind CSS 4 (CSS-first @theme).
+ *
+ * DESIGN.md specifies a *light* Vercel system; the product brief calls for a
+ * dark-mode-first Bloomberg terminal, so we invert the surface/ink polarity while
+ * preserving DESIGN.md's structural tokens: the 4px spacing scale, the radius
+ * ladder, the type scale (negative tracking on display), the stacked-shadow
+ * elevation model, and "mono for technical labels, geometric sans for narrative."
+ *
+ * next/font emits --font-geist-sans / --font-geist-mono (renamed to avoid a
+ * self-reference with the --font-sans / --font-mono theme tokens below).
+ */
+@theme {
+  /* Dark surfaces (inverted polarity from DESIGN.md's canvas ladder). */
+  --color-canvas: #0a0a0a;
+  --color-canvas-soft: #111111;
+  --color-canvas-soft-2: #161616;
+  --color-panel: #1a1a1a;
+  --color-hairline: #262626;
+  --color-hairline-strong: #404040;
+
+  /* Ink -> light on dark. */
+  --color-ink: #ededed;
+  --color-body: #a1a1a1;
+  --color-mute: #6b6b6b;
+
+  /* Accents retained from DESIGN.md (the gradient/semantic palette). */
+  --color-link: #0070f3;
+  --color-success: #0ac27e;
+  --color-error: #ee0000;
+  --color-warning: #f5a623;
+  --color-violet: #7928ca;
+  --color-cyan: #50e3c2;
+  --color-highlight-pink: #ff0080;
+
+  /* Financial up/down semantics (terminal convention). */
+  --color-up: #0ac27e;
+  --color-down: #ff4d4d;
+
+  /* Geometric sans for narrative; mono for technical labels/numbers. */
+  --font-sans: var(--font-geist-sans), Inter, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* DESIGN.md type scale (display uses negative tracking). */
+  --text-display-xl: 48px;
+  --text-display-xl--line-height: 48px;
+  --text-display-xl--letter-spacing: -2.4px;
+  --text-display-xl--font-weight: 600;
+  --text-display-lg: 32px;
+  --text-display-lg--line-height: 40px;
+  --text-display-lg--letter-spacing: -1.28px;
+  --text-display-lg--font-weight: 600;
+  --text-display-md: 24px;
+  --text-display-md--line-height: 32px;
+  --text-display-md--letter-spacing: -0.96px;
+  --text-display-md--font-weight: 600;
+  --text-display-sm: 20px;
+  --text-display-sm--line-height: 28px;
+  --text-display-sm--letter-spacing: -0.6px;
+  --text-display-sm--font-weight: 600;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--letter-spacing: -0.28px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+
+  /* 4px base unit ladder from DESIGN.md. */
+  --spacing-xxs: 4px;
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 40px;
+  --spacing-3xl: 48px;
+  --spacing-4xl: 64px;
+  --spacing-5xl: 96px;
+
+  /* Radius ladder. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 100px;
+
+  /* Stacked-shadow elevation (tuned darker for the terminal surface). */
+  --shadow-level-2: 0px 1px 1px rgba(0, 0, 0, 0.3), 0px 2px 2px rgba(0, 0, 0, 0.2);
+  --shadow-level-3: 0px 2px 2px rgba(0, 0, 0, 0.3), 0px 8px 8px -8px rgba(0, 0, 0, 0.3);
+  --shadow-level-4: 0px 2px 2px rgba(0, 0, 0, 0.3), 0px 8px 16px -4px rgba(0, 0, 0, 0.4);
+}
 
 :root {
   color-scheme: dark;

@@ -8,12 +8,12 @@ import "./globals.css";
 const sans = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-sans",
+  variable: "--font-geist-sans",
 });
 const mono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
-  variable: "--font-mono",
+  variable: "--font-geist-mono",
 });
 
 export const metadata: Metadata = {
