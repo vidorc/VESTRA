@@ -314,6 +314,38 @@ export interface MemoryAnalytics {
   by_ticker: TickerTally[];
 }
 
+// --- Decision Review (what worked / what failed / why + timeline) --------
+
+export interface DecisionReviewEntry {
+  ticker: string;
+  decisions: number;
+  worked: number;
+  failed: number;
+  pending: number;
+  win_rate: number;
+  note: string;
+}
+
+export interface TimelineEvent {
+  ts: string;
+  ticker: string;
+  action: "BUY" | "SELL" | "HOLD";
+  quantity: number;
+  status: "worked" | "failed" | "pending" | "no_action";
+  description: string;
+}
+
+export interface DecisionReview {
+  total: number;
+  completed: number;
+  losses: number;
+  pending: number;
+  win_rate: number;
+  by_ticker: DecisionReviewEntry[];
+  timeline: TimelineEvent[];
+  highlights: string[];
+}
+
 export interface DigitalTwin {
   age?: number | null;
   annual_income: number;
@@ -365,6 +397,10 @@ export const reasoning = {
 export const memory = {
   get: (limit = 100) =>
     api<{ memories: MemoryRecord[]; analytics: MemoryAnalytics }>(`/memory?limit=${limit}`),
+};
+
+export const review = {
+  get: (limit = 200) => api<DecisionReview>(`/review?limit=${limit}`),
 };
 
 export const rebalance = {

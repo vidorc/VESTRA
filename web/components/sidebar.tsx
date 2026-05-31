@@ -12,6 +12,7 @@ import {
   LogOut,
   Settings,
   BarChart3,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearToken } from "@/lib/auth";
@@ -29,6 +30,7 @@ const SECTIONS = [
       { href: "/market", label: "Market Intelligence", icon: Activity, ready: true },
       { href: "/reasoning", label: "Agent Reasoning", icon: Brain, ready: true },
       { href: "/analytics", label: "Analytics", icon: BarChart3, ready: true },
+      { href: "/review", label: "Decision Review", icon: History, ready: true },
     ],
   },
   {

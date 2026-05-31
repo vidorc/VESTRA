@@ -48,6 +48,7 @@ from app.data.repository import (
 )
 from app.models.schemas import DigitalTwin, Goal, MarketEvent
 from app.services.memory import memory_analytics
+from app.services.review import review_decisions
 from app.services.portfolio_health import compute_portfolio_health
 from app.services.rebalancer import preview_rebalance
 from app.agent.nodes.regime import aggregate_regime
@@ -185,6 +186,18 @@ async def memory(user_id: str = Depends(get_current_user_id), limit: int = 100):
     """
     memories = await list_agent_memories(user_id, limit=min(limit, 500))
     return {"memories": memories, "analytics": memory_analytics(memories)}
+
+
+@app.get("/review")
+async def review(user_id: str = Depends(get_current_user_id), limit: int = 200):
+    """Return a Decision Review: what worked, what failed, why, plus a timeline.
+
+    A deterministic roll-up over the agent's memory (past decisions + outcomes):
+    overall tallies and win rate, per-ticker attribution, a chronological investor
+    timeline, and plain-English highlights. Closes the trust/learning loop.
+    """
+    memories = await list_agent_memories(user_id, limit=min(limit, 500))
+    return review_decisions(memories).model_dump()
 
 
 @app.post("/rebalance/preview")

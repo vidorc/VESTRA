@@ -339,4 +339,54 @@ class Explanation(BaseModel):
     why_not: List[WhyNot] = []
 
 
+# --- Decision Review: periodic "what worked / what failed / why" + timeline ----
+
+
+class DecisionReviewEntry(BaseModel):
+    """One ticker's track record over a decision-review period."""
+
+    ticker: str
+    decisions: int = 0
+    worked: int = 0
+    failed: int = 0
+    pending: int = 0
+    win_rate: float = 0.0  # over *decided* trades only (worked / (worked + failed))
+    note: str = ""  # plain-English attribution
+
+
+class TimelineEvent(BaseModel):
+    """One chronological entry in the investor timeline.
+
+    The narrative spine of the review -- "Jan 10: Bought RELIANCE (worked)" --
+    ordered oldest-first so it reads as a story.
+    """
+
+    ts: str
+    ticker: str
+    action: Literal["BUY", "SELL", "HOLD"]
+    quantity: int = 0
+    status: Literal["worked", "failed", "pending", "no_action"] = "pending"
+    description: str = ""
+
+
+class DecisionReview(BaseModel):
+    """A periodic review of the agent's decisions: what worked, what failed, why.
+
+    Deterministic roll-up over the agent's memory (past decisions + outcomes):
+    overall tallies and win rate, a per-ticker attribution, a chronological
+    timeline, and a few plain-English highlights. Builds the trust/learning loop
+    the master prompt calls for -- "review all decisions, which worked, which
+    failed, why" -- without another LLM call.
+    """
+
+    total: int = 0
+    completed: int = 0
+    losses: int = 0
+    pending: int = 0
+    win_rate: float = 0.0
+    by_ticker: List[DecisionReviewEntry] = []
+    timeline: List[TimelineEvent] = []
+    highlights: List[str] = []
+
+
 
