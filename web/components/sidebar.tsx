@@ -19,7 +19,7 @@ import { clearToken } from "@/lib/auth";
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, ready: true },
   { href: "/market", label: "Market Intelligence", icon: Activity, ready: true },
-  { href: "/reasoning", label: "Agent Reasoning", icon: Brain, ready: false },
+  { href: "/reasoning", label: "Agent Reasoning", icon: Brain, ready: true },
   { href: "/execution", label: "Execution", icon: PlayCircle, ready: true },
   { href: "/portfolio", label: "Portfolio", icon: PieChart, ready: true },
   { href: "/audit", label: "Audit", icon: ScrollText, ready: true },

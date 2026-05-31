@@ -29,6 +29,7 @@ _INDEXES: List[Tuple[str, List[Tuple[str, int]], dict]] = [
     # Reserved V2 collections — index now so later phases inherit fast queries.
     ("market_events", [("ticker", ASCENDING), ("ts", DESCENDING)], {"name": "ticker_ts"}),
     ("research_context", [("user_id", ASCENDING), ("ts", DESCENDING)], {"name": "user_ts"}),
+    ("reasoning_traces", [("user_id", ASCENDING), ("ts", DESCENDING)], {"name": "user_ts"}),
     ("trade_decisions", [("user_id", ASCENDING), ("ts", DESCENDING)], {"name": "user_ts"}),
     ("trade_executions", [("user_id", ASCENDING), ("ts", DESCENDING)], {"name": "user_ts"}),
     ("portfolio_snapshots", [("user_id", ASCENDING), ("ts", DESCENDING)], {"name": "user_ts"}),

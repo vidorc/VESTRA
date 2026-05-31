@@ -59,7 +59,11 @@ from app.agent.nodes.validator import validate_trade_decision
 from app.agent.nodes.approval import run_approval
 from app.agent.nodes.execution import execute_trade_decision
 from app.agent.nodes.audit import audit_agent_action
-from app.data.repository import save_research_context, save_simulation_result
+from app.data.repository import (
+    save_reasoning_trace,
+    save_research_context,
+    save_simulation_result,
+)
 
 
 class AgentState(TypedDict, total=False):
@@ -177,6 +181,31 @@ async def validator_node(state: AgentState) -> AgentState:
         state["risk"],
         state.get("holdings", {}),
     )
+
+    # Persist the full reasoning trace (best-effort; never break the run). The
+    # validator is the last node always reached before branching and is not
+    # re-run on resume, so exactly one trace is captured per decision. Maps each
+    # AgentState output to a plain dict for storage.
+    def _dump(key):
+        value = state.get(key)
+        return value.model_dump() if value is not None else None
+
+    try:
+        trace = {
+            "signal": _dump("signal"),
+            "research": _dump("research_context"),
+            "risk": _dump("risk"),
+            "decision": _dump("decision"),
+            "reflection": _dump("reflection"),
+            "confidence": _dump("confidence"),
+            "validation": validation.model_dump(),
+        }
+        await save_reasoning_trace(
+            state["user_id"], trace, event_id=state.get("event_id")
+        )
+    except Exception:
+        pass
+
     return {"validation": validation}
 
 

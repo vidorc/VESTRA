@@ -39,6 +39,7 @@ from app.data.repository import (
     get_profile,
     get_recent_market_events,
     list_goals,
+    list_reasoning_traces,
     list_simulations,
     record_market_event,
     update_goal,
@@ -161,6 +162,16 @@ async def market_regime(user_id: str = Depends(get_current_user_id)):
 async def simulations(user_id: str = Depends(get_current_user_id), limit: int = 50):
     """Return the authenticated user's recent scenario-simulation results."""
     return {"simulations": await list_simulations(user_id, limit=min(limit, 200))}
+
+
+@app.get("/reasoning")
+async def reasoning(user_id: str = Depends(get_current_user_id), limit: int = 50):
+    """Return the authenticated user's recent agent reasoning traces.
+
+    Each trace is the full chain produced for one decision: signal, research,
+    risk, strategy decision, reflection, confidence, and validation outputs.
+    """
+    return {"traces": await list_reasoning_traces(user_id, limit=min(limit, 200))}
 
 
 @app.post("/rebalance/preview")

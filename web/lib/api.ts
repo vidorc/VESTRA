@@ -191,6 +191,56 @@ export interface ApprovalRequest {
   ts?: string;
 }
 
+// --- Agent reasoning trace (the 7 agent outputs per decision) ------------
+
+export interface SignalAssessment {
+  event_type: "macro" | "company" | "earnings" | "commodity" | "geopolitical";
+  severity: "low" | "medium" | "high" | "critical";
+  impacted_assets: string[];
+}
+
+export interface ResearchContext {
+  sentiment: "bullish" | "bearish" | "neutral";
+  relevant_news: string[];
+  sector_impact: string;
+  historical_context: string;
+  market_conditions: string;
+  data_completeness: number;
+}
+
+export interface RiskAssessment {
+  concentration_risk: string;
+  cash_available: number;
+  safe_trade_limit: number;
+  notes?: string | null;
+}
+
+export interface ReflectionResult {
+  is_logical: boolean;
+  assumptions: string[];
+  missing_data: string[];
+  better_alternative?: string | null;
+  verdict: "sound" | "acceptable" | "questionable";
+}
+
+export interface ValidationResult {
+  approved: boolean;
+  reason: string;
+}
+
+export interface ReasoningTrace {
+  _id?: string;
+  event_id?: string | null;
+  ts?: string;
+  signal: SignalAssessment | null;
+  research: ResearchContext | null;
+  risk: RiskAssessment | null;
+  decision: TradeDecision | null;
+  reflection: ReflectionResult | null;
+  confidence: ConfidenceScore | null;
+  validation: ValidationResult | null;
+}
+
 export interface DigitalTwin {
   age?: number | null;
   annual_income: number;
@@ -232,6 +282,11 @@ export const market = {
 export const simulations = {
   list: (limit = 50) =>
     api<{ simulations: SimulationResult[] }>(`/simulations?limit=${limit}`),
+};
+
+export const reasoning = {
+  list: (limit = 50) =>
+    api<{ traces: ReasoningTrace[] }>(`/reasoning?limit=${limit}`),
 };
 
 export const rebalance = {

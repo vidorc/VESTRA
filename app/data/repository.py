@@ -429,6 +429,43 @@ async def save_research_context(
     return str(result.inserted_id)
 
 
+# --- Reasoning traces ----------------------------------------------------
+
+async def save_reasoning_trace(
+    user_id: str, trace: Dict[str, Any], event_id: Optional[str] = None
+) -> str:
+    """Persist a full agent reasoning trace for a user/decision. Returns its id.
+
+    A trace is the complete chain produced for one decision (signal, research,
+    risk, decision, reflection, confidence, validation). Captured once per run by
+    the validator node so every decision is inspectable afterwards.
+    """
+    db = get_db()
+    doc = {"user_id": user_id, "event_id": event_id, "ts": _utcnow(), **trace}
+    result = await db.reasoning_traces.insert_one(doc)
+    return str(result.inserted_id)
+
+
+async def list_reasoning_traces(user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    """List a user's reasoning traces, newest first.
+
+    Sorts by ``ts`` then ``_id`` (both descending) so traces written within the
+    same clock tick still order deterministically by insertion (ObjectId is
+    monotonic).
+    """
+    db = get_db()
+    cursor = (
+        db.reasoning_traces.find({"user_id": user_id})
+        .sort([("ts", -1), ("_id", -1)])
+        .limit(limit)
+    )
+    out = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        out.append(doc)
+    return out
+
+
 # --- Approval requests ---------------------------------------------------
 
 async def create_approval_request(
@@ -554,6 +591,8 @@ __all__ = [
     "save_simulation_result",
     "list_simulations",
     "save_research_context",
+    "save_reasoning_trace",
+    "list_reasoning_traces",
     "create_approval_request",
     "get_approval",
     "get_approval_by_thread",
