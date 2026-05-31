@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { inr } from "@/lib/utils";
 import { Card, Eyebrow } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -241,10 +242,7 @@ function GoalsSection() {
 export default function SettingsPage() {
   return (
     <div className="px-xl py-lg">
-      <div className="mb-lg">
-        <Eyebrow>Profile & planning</Eyebrow>
-        <h1 className="mt-xxs text-display-lg text-ink">Settings.</h1>
-      </div>
+      <PageHeader eyebrow="Profile & planning" title="Settings." />
       <div className="space-y-lg">
         <TwinSection />
         <GoalsSection />

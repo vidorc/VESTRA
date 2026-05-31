@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { approvals, type ApprovalRequest } from "@/lib/api";
 import { Card, Eyebrow } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -76,13 +77,11 @@ export default function ExecutionPage() {
 
   return (
     <div className="px-xl py-lg">
-      <div className="mb-lg">
-        <Eyebrow>Human-in-the-loop</Eyebrow>
-        <h1 className="mt-xxs text-display-lg text-ink">Execution Center.</h1>
-        <p className="mt-xs text-body-sm text-mute">
-          Trades awaiting your approval before they execute.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Human-in-the-loop"
+        title="Execution Center."
+        description="Trades awaiting your approval before they execute."
+      />
 
       {isLoading && <p className="text-body-sm text-body">Loading approvals…</p>}
 

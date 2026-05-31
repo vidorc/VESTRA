@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { audit } from "@/lib/api";
-import { Card, Eyebrow } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 
 /** Pull execution evidence (Phase 3) out of an audit payload, if present. */
@@ -26,10 +27,7 @@ export default function AuditPage() {
 
   return (
     <div className="px-xl py-lg">
-      <div className="mb-lg">
-        <Eyebrow>Trace</Eyebrow>
-        <h1 className="mt-xxs text-display-lg text-ink">Audit.</h1>
-      </div>
+      <PageHeader eyebrow="Trace" title="Audit." />
 
       {isLoading && <p className="text-body text-body-sm">Loading audit log…</p>}
       {error && (

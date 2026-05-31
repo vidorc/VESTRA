@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { memory, reasoning, type ReasoningTrace } from "@/lib/api";
 import { Card, Eyebrow, Stat } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import {
   BarSeriesChart,
@@ -74,13 +75,11 @@ export default function AnalyticsPage() {
 
   return (
     <div className="px-xl py-lg">
-      <div className="mb-lg">
-        <Eyebrow>Executive analytics</Eyebrow>
-        <h1 className="mt-xxs text-display-lg text-ink">Analytics.</h1>
-        <p className="mt-xs text-body-sm text-mute">
-          Decision history, agent confidence, market regime, and learning outcomes.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Executive analytics"
+        title="Analytics."
+        description="Decision history, agent confidence, market regime, and learning outcomes."
+      />
 
       {/* Top-line stats */}
       <div className="grid grid-cols-2 gap-md lg:grid-cols-4">

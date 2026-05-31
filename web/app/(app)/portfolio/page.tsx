@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { health, portfolio, rebalance, type RebalancePlan } from "@/lib/api";
 import { inr } from "@/lib/utils";
 import { Card, Eyebrow } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -34,10 +35,7 @@ export default function PortfolioPage() {
 
   return (
     <div className="px-xl py-lg">
-      <div className="mb-lg">
-        <Eyebrow>Positions & health</Eyebrow>
-        <h1 className="mt-xxs text-display-lg text-ink">Portfolio.</h1>
-      </div>
+      <PageHeader eyebrow="Positions & health" title="Portfolio." />
 
       {/* Health + factors */}
       <div className="grid grid-cols-1 gap-md lg:grid-cols-3">

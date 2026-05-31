@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { market, simulations } from "@/lib/api";
 import { Card, Eyebrow } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { RegimeBadge } from "@/components/ui/regime-badge";
 import { TrendChart, chartTokens } from "@/components/charts/primitives";
@@ -22,10 +23,7 @@ export default function MarketPage() {
 
   return (
     <div className="px-xl py-lg">
-      <div className="mb-lg">
-        <Eyebrow>Conditions & analysis</Eyebrow>
-        <h1 className="mt-xxs text-display-lg text-ink">Market Intelligence.</h1>
-      </div>
+      <PageHeader eyebrow="Conditions & analysis" title="Market Intelligence." />
 
       <div className="grid grid-cols-1 gap-md lg:grid-cols-3">
         <Card>
