@@ -53,6 +53,13 @@ class Settings(BaseSettings):
     # "static" (default, no I/O) or "yfinance" (live; falls back to static).
     MARKET_DATA_PROVIDER: str = "static"
 
+    # --- Phase 3: autonomous execution ------------------------------------
+    # How trades capture execution evidence: "paper" (deterministic simulation,
+    # default, no browser) or "demo" (headless-browser screenshot, degrades to
+    # paper if unavailable). "live" real-money execution is intentionally
+    # unsupported and refused by the executor.
+    EXECUTION_MODE: str = "paper"
+
     # --- CORS -------------------------------------------------------------
     # Comma-separated list of allowed origins for the browser frontend.
     # Default "*" is fine for local dev; lock down in production.
