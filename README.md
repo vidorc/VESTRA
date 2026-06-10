@@ -1,145 +1,184 @@
-# Vestra
+<p align="center">
+  <a href="https://github.com/vidorc/VESTRA">
+    <img src="assets/vestra-banner.png" alt="VESTRA Banner" width="100%">
+  </a>
+</p>
 
-An AI Wealth Operating System for Indian retail investors. Vestra ingests market
-events and runs them through a LangGraph agent pipeline to produce disciplined,
-auditable, per-user investment decisions — with research enrichment, market-regime
-detection, scenario simulation, self-critique, confidence scoring, and a
-human-in-the-loop approval gate. It also scores portfolio health and previews
-rebalancing.
+<h1 align="center">🚀 VESTRA — AI Wealth Operating System</h1>
 
-> Phases 0 (hardening), 1 (intelligence + approval), and 2 (portfolio
-> intelligence) are complete. See `docs/ARCHITECTURE.md` (system as built),
-> `docs/PHASE1.md` and `docs/PHASE2.md` (feature layers), `docs/BUILD_PROGRESS.md`
-> (status), `DESIGN.md` (frontend design system), and
-> `docs/VESTRA_V2_MASTER_PROMPT.md` (full vision + roadmap).
+<p align="center">
+  Multi-Agent AI Wealth Platform for Research, Risk Analysis, Portfolio Intelligence, and Autonomous Financial Decision Support.
+</p>
 
-## Architecture
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12-blue" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-Backend-green" alt="FastAPI">
+  <img src="https://img.shields.io/badge/LangGraph-MultiAgent-purple" alt="LangGraph">
+  <img src="https://img.shields.io/badge/MongoDB-Database-green" alt="MongoDB">
+  <img src="https://img.shields.io/badge/Next.js-Frontend-black" alt="Next.js">
+  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
+</p>
 
-```
-POST /webhook/market-alert  (API-key)        Authenticated user (JWT)
-        │                                          │
-        ▼                                          ▼
-  classify + record event           /portfolio /audit /auth/* /approvals
-        │ fan-out per impacted user
-        ▼
-  run_vestra_workflow(user_id, event)   ──►  LangGraph StateGraph
-    signal → research → risk → strategy → reflection → confidence → validate
-      validate ─(ok)→ approval ─(approved|auto)→ execute → END
-               └(no)→ reject                    └(human reject)→ reject
-```
+---
 
-The `approval` node may pause the run for human sign-off (Telegram / REST) per
-the investor's approval policy; see `docs/PHASE1.md`.
+## 📖 Project Description
 
-- **API layer** — FastAPI (`app/main.py`), JWT auth + rate limiting + CORS.
-- **Orchestration** — LangGraph (`app/agent/graph.py`), with `interrupt()`/resume
-  for human approval.
-- **LLM** — Groq `llama-3.3-70b-versatile` (strategy, research, reflection).
-- **Data** — MongoDB (Motor), accessed via the repository layer
-  (`app/data/repository.py`); the optional MCP transport shim is
-  `app/mcp/server.py`.
-- **Market data** — pluggable provider (`app/data/market/`); static reference
-  table by default, optional yfinance live feed.
-- **Approvals** — policy engine + Telegram bot (`app/integrations/telegram/`) +
-  REST (`app/approvals/`).
+> A multi-agent AI platform that acts as a digital Chief Investment Officer by researching market events, analyzing portfolio risk, running simulations, validating decisions, obtaining approval, executing actions, and continuously learning from outcomes.
 
-## Requirements
+Most AI finance tools provide simple, isolated stock recommendations. Vestra replaces emotional, reactive trading with a structured, intelligent pipeline. It combines market intelligence, digital twin investor profiling, strategy generation, and execution automation into a single, production-ready operating system designed initially for the Indian retail market.
 
-- Python 3.11+
-- MongoDB (local via Docker, or MongoDB Atlas)
-- A Groq API key
+---
 
-## Configuration
+## ✨ Key Features
 
-Copy `.env.example` to `.env` and fill in values:
+* **Multi-Agent Architecture:** 15 specialized AI agents handle distinct aspects of the investment lifecycle (Signal, Research, Risk, CIO, etc.).
+* **Research & Market Intelligence:** Automatically contextualizes market events across NSE, BSE, and global macroeconomics.
+* **Portfolio Health Engine:** Scores portfolios (0-100) based on diversification, liquidity, and risk exposure.
+* **Risk Management & Simulations:** Runs base and worst-case scenarios before making recommendations.
+* **Strategy Council & CIO Agent:** Debates momentum, contrarian, and macro strategies before the CIO Agent makes a final call.
+* **Reflection & Confidence Scoring:** AI challenges its own logic and assigns a reliability score to every decision.
+* **Telegram Approval Workflow:** Human-in-the-loop validation. No actions are executed without explicit user consent.
+* **OpenClaw Automation:** Executes approved actions via browser automation (currently restricted to Paper/Demo trading for safety).
+* **Digital Twin Investor Profiles:** Understands your income, expenses, loans, and risk tolerance.
+* **Goal-Based Investing:** Optimizes for life goals (Retirement, House Purchase) rather than just chasing yield.
+* **Modern Next.js Dashboard:** Provides complete transparency into the AI's reasoning, research, and audit logs.
 
-| Variable | Required | Notes |
-|---|---|---|
-| `GROQ_API_KEY` | yes | Groq LLM key. |
-| `MONGODB_URI` | yes | Atlas `mongodb+srv://…` or `mongodb://localhost:27017`. |
-| `JWT_SECRET` | yes | ≥32 chars. Generate: `openssl rand -hex 32`. |
-| `WEBHOOK_API_KEY` | no* | Shared key for the market-alert webhook. **Unset ⇒ webhook rejects all calls (fail-closed).** |
-| `DATABASE_NAME` | no | Defaults to `vestra`. |
-| `GROQ_MODEL` | no | Defaults to `llama-3.3-70b-versatile`. |
-| `MARKET_DATA_PROVIDER` | no | `static` (default) or `yfinance`. |
-| `CORS_ORIGINS` | no | Comma-separated; defaults to `*` (lock down in prod). |
+---
 
-## Local development
+## 🏗️ Architecture Diagram
 
-```bash
-python -m venv .venv && source .venv/bin/activate
+Vestra's core intelligence lies in its LangGraph-powered pipeline. Specialized agents collaborate to form a digital Strategy Council.
+
+```mermaid
+graph TD
+    Event[Market Event Detected] --> Signal[Signal Agent]
+    Signal -->|Determines Event Severity| Research[Research Agent]
+    Research -->|Gathers Market Context| Regime[Market Regime Agent]
+    Regime -->|Identifies Bull/Bear State| Risk[Risk Agent]
+    Risk -->|Analyzes Portfolio Concentration| Sim[Simulation Agent]
+    Sim -->|Runs Scenarios| Council[Strategy Council]
+    Council -->|Provides Diverse Perspectives| CIO[CIO Agent]
+    CIO -->|Makes Final Recommendation| Reflection[Reflection Agent]
+    Reflection -->|Challenges Logic| Conf[Confidence Agent]
+    Conf -->|Scores Reliability| Valid[Validator Agent]
+    Valid -->|Policy Safety Check| Approv[Approval Agent]
+    Approv -->|Telegram Notification| Human{Human Approval}
+    Human -->|Approved| Exec[Execution Agent]
+    Human -->|Rejected| Audit
+    Exec -->|OpenClaw Automation| Audit[Audit Agent]
+    Audit -->|Records Traceability| Memory[Memory Agent]
+    Memory -->|Stores Outcomes| Learn[Learning Agent]
+💻 Tech Stack
+Component	Technologies
+Frontend	Next.js 15, TypeScript, Tailwind CSS, shadcn/ui
+Backend	FastAPI, Python, Pydantic, JWT Auth
+AI Layer	Groq LLM, LangGraph (Multi-Agent System)
+Database	MongoDB Atlas
+Execution	OpenClaw (Browser Automation)
+Infrastructure	Docker, Railway, GitHub Actions
+📸 Screenshots
+(Place your screenshots in the assets/ folder to render them here)
+
+Agent Reasoning Dashboard
+
+Telegram Approval Workflow
+
+Portfolio Health Monitoring
+
+🚀 Getting Started
+Prerequisites
+Node.js 18+ & Python 3.10+
+
+MongoDB Atlas Cluster URI
+
+Groq API Key
+
+Telegram Bot Token
+
+1. Clone the Repository
+Bash
+git clone [https://github.com/vidorc/VESTRA.git](https://github.com/vidorc/VESTRA.git)
+cd VESTRA
+2. Backend Setup
+Bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
+Create a .env file in the backend/ directory:
 
-# Create indexes and seed demo users (needs MONGODB_URI reachable):
-python -m app.scripts.create_indexes
-python -m tests.seed_db          # prints demo credentials
+Code snippet
+MONGODB_URI=your_mongodb_connection_string
+GROQ_API_KEY=your_groq_api_key
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+JWT_SECRET=your_jwt_secret
+Run the FastAPI server:
 
-uvicorn app.main:app --reload
-```
+Bash
+uvicorn app.main:app --reload --port 8000
+3. Frontend Setup
+Bash
+cd ../frontend
+npm install
+Create a .env.local file in the frontend/ directory:
 
-Open `http://localhost:8000/docs` for the interactive API.
+Code snippet
+NEXT_PUBLIC_API_URL=http://localhost:8000
+Run the Next.js development server:
 
-### Auth quickstart
+Bash
+npm run dev
+Navigate to http://localhost:3000 to view the Vestra Dashboard.
 
-```bash
-# Register (also creates a default investor profile)
-curl -X POST localhost:8000/auth/register \
-  -H 'content-type: application/json' \
-  -d '{"email":"me@example.com","password":"supersecret1"}'
-# -> {"access_token":"…","user_id":"…"}
+📂 Project Structure
+Plaintext
+VESTRA/
+├── assets/                 # Banner and screenshots
+│   └── vestra-banner.png
+├── backend/                # FastAPI Application
+│   ├── agents/             # LangGraph specialized agents
+│   ├── api/                # API routes and endpoints
+│   ├── core/               # Security and configuration
+│   ├── models/             # MongoDB schemas & Pydantic models
+│   └── services/           # External integrations (Telegram, OpenClaw)
+├── frontend/               # Next.js Application
+│   ├── app/                # App router pages
+│   ├── components/         # UI components (shadcn)
+│   └── lib/                # Utilities and API clients
+└── README.md
+🛣️ Roadmap
+[x] Multi-Agent LangGraph architecture implementation
 
-curl localhost:8000/portfolio -H "Authorization: Bearer <token>"
-```
+[x] Portfolio intelligence & Digital Twin modeling
 
-### Triggering the workflow
+[x] Telegram Human-in-the-Loop approval workflows
 
-```bash
-curl -X POST localhost:8000/webhook/market-alert \
-  -H "X-API-Key: $WEBHOOK_API_KEY" \
-  -H 'content-type: application/json' \
-  -d '{"ticker":"RELIANCE","price_change_percent":-6.0,"breaking_news_summary":"Selloff."}'
-```
+[x] End-to-end auditability and Agent Reasoning Dashboard
 
-The webhook fans out to every user holding the impacted ticker/assets.
+[ ] OpenClaw Browser Automation integration
 
-## Docker
+[ ] Real-Time NSE Intelligence integration
 
-```bash
-# Brings up MongoDB + the API (API waits for Mongo healthcheck).
-# Provide GROQ_API_KEY and JWT_SECRET via .env or the shell.
-docker compose up --build
-```
+[ ] Deep Memory & Continuous Learning System
 
-The image runs as a non-root user and honors `$PORT`. `.dockerignore` keeps
-`.env`, `.git`, and the frontend out of the image.
+[ ] Advanced Analytics & Institutional Portfolio Features
 
-## Deployment
+🤝 Contributing
+Contributions make the open-source community an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
 
-- **Backend → Railway:** `railway.json` builds from the Dockerfile and
-  health-checks `/`. Set all required env vars in the Railway dashboard. The
-  start command honors Railway's injected `$PORT`.
-- **Database → MongoDB Atlas:** set `MONGODB_URI` to the Atlas SRV string.
-- **Frontend → Vercel:** the Next.js app lives in `web/` (scaffolded with the
-  frontend phase); deploy with Vercel Root Directory = `web/`.
+Fork the Project
 
-## Testing
+Create your Feature Branch (git checkout -b feature/AmazingFeature)
 
-```bash
-pytest                 # unit + integration (no live DB/LLM needed)
-```
+Commit your Changes (git commit -m 'Add some AmazingFeature')
 
-Tests use `mongomock-motor` for an in-memory Mongo and inject a fake LLM via the
-`strategy.set_llm` seam, so the suite runs fully offline. Manual integration
-scripts (`tests/simulate_*.py`, `tests/seed_db.py`) hit a live stack and are not
-collected by pytest.
+Push to the Branch (git push origin feature/AmazingFeature)
 
-## Security notes
+Open a Pull Request
 
-- The market-alert webhook is machine-to-machine and authorized by
-  `WEBHOOK_API_KEY` (not user JWT). It is fail-closed.
-- User endpoints derive identity from the verified JWT `sub` claim — a caller
-  can only ever act as themselves.
-- Passwords are PBKDF2-HMAC-SHA256 hashed with a per-password salt.
-- `execute_trade` is atomic (document-level guard) and idempotent
-  (`idempotency_key`), preventing overspend under concurrency and double
-  execution on retries.
+👨‍💻 Author
+Mayank Sharma
+
+GitHub: vidorc
+
+LinkedIn: Mayank Sharma
